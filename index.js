@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const UserController = require('./controllers/userControllers')
-const port = 3001
+const port = process.env.PORT || 3000;
 
 const app = express()
 app.use(cors())
