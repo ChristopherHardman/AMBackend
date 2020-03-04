@@ -13,7 +13,7 @@ const Samples = [
     liveSpot: 0.71707,
     cp: 'C',
     traderName: 'Olivia Evans',
-    amountFilled: '50%'
+    amountFilled: 50
   },
   {currencyPair: 'EURAUD',
     buySell: 'Buy',
@@ -25,7 +25,7 @@ const Samples = [
     liveSpot: 0.6005,
     cp: 'C / P',
     traderName: 'Alfie Wood',
-    amountFilled: '75%'
+    amountFilled: 75
   },
   {currencyPair: 'AUDUSD',
     buySell: 'Sell',
@@ -37,7 +37,7 @@ const Samples = [
     liveSpot: 0.71707,
     cp: 'C',
     traderName: 'Olivia Evans',
-    amountFilled: '50%'
+    amountFilled: 50
   },
   {currencyPair: 'EURAUD',
     buySell: 'Buy',
@@ -49,7 +49,7 @@ const Samples = [
     liveSpot: 0.6005,
     cp: 'C / P',
     traderName: 'Alfie Wood',
-    amountFilled: '75%'
+    amountFilled: 75
   },
 ]
 
@@ -66,7 +66,7 @@ const search = async (req, res) => {
     //   ws.close()
     // });
 
-    res.send(Samples)
+    setTimeout(()=> res.send(Samples), 500)
 
   } catch (error) {
     console.log('ERROR', error)
