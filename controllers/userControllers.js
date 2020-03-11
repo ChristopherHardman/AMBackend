@@ -4,10 +4,10 @@ const signIn = async (req, res) => {
     console.log('signin', req.body)
     const { email, password } = req.body;
     if (email === 'banktest@am.com' && password === 'am2020!') {
-      res.send({ token: 'token', type: 'bank' })
+      res.send({ token: 'token', type: 'bank', firstName: 'Joe', lastName: 'Smith' })
     }
     if (email === 'clienttest@am.com' && password === 'am2020!') {
-      res.send({ token: 'token', type: 'client' })
+      res.send({ token: 'token', type: 'client', firstName: 'Joe', lastName: 'Smith' })
     }
     if (email !== 'clienttest@am.com' && email !== 'banktest@am.com' && password !== 'am2020!') {
       res.sendStatus(401)

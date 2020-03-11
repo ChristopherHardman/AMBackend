@@ -28,8 +28,9 @@ app.use(bodyParser.json())
 app.post('/signin', UserController.signIn)
 app.post('/search', SearchController.search)
 app.post('/submitAxe', AxeController.submitAxe)
+app.post('/viewAxe', SearchController.viewAxe)
 
 app.get('/', (req, res) => res.send('Hello World!'))
 
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+app.listen(port, () => console.log(`AM backend listening on port ${port}!`))

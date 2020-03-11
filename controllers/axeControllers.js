@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const DB = require('../dbConnect');
 
 const submitAxe = async (req, res) => {
   try {
@@ -11,6 +12,7 @@ const submitAxe = async (req, res) => {
     //   ws.send('something else');
     // });
     // wss.close()
+    DB.addAxe(req.body.axe)
     setTimeout(()=> res.sendStatus(200), 500)
 
 
