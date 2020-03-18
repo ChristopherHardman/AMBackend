@@ -1,6 +1,5 @@
 const DB = require('../dbConnect');
-// const wss = require('../index.js')
-const WebSocket = require('ws');
+const users = require('../index.js')
 
 const Samples = [
   {currencyPair: 'AUDUSD',
@@ -88,14 +87,6 @@ const search = async (req, res) => {
   try {
     console.log('search', req.body)
     const results = await DB.getAxes(req.body.query)
-    // const wss = new WebSocket.Server({ port: 80 });
-    // wss.on('connection', function connection(ws, req) {
-    //   ws.on('message', function incoming(message) {
-    //     console.log('received: %s', message);
-    //   })
-    //   ws.send('something else');
-    //   ws.close()
-    // });
     res.send(results)
 
   } catch (error) {
@@ -120,5 +111,18 @@ const viewAxe = async (req, res) => {
 }
 
 
+const trade = async (req, res) => {
+  try {
+    console.log('Trade', req.body)
+    req.body.socketID && req.app.io.to(req.body.socketID).emit("FromAPI", 'trade');
 
-module.exports = {search, viewAxe};
+
+  } catch (error) {
+    console.log('ERROR', error)
+    res.sendStatus(500)
+  }
+}
+
+
+
+module.exports = {search, viewAxe, trade};

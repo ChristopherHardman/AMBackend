@@ -1,10 +1,13 @@
-const express = require('express')
+const app = require('express')()
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const UserController = require('./controllers/userControllers')
 const SearchController = require('./controllers/searchControllers')
 const AxeController = require('./controllers/axeControllers')
 
+// const app = require('express')();
+const server = require('http').createServer(app);
+const io = require('socket.io')(server);
 const port = process.env.PORT || 3001;
 
 // const WebSocket = require('ws');
@@ -20,17 +23,45 @@ const port = process.env.PORT || 3001;
 // })
 // });
 
-const app = express()
+
+
+let users = []
+
+io.on("connection", socket => {
+  console.log("New client connected")
+  socket.on("token", (data) => {
+    console.log('ddddd', data)
+    users.push({ id : socket.id, userID : data });
+    console.log('UUU', users);
+  })
+  socket.on("disconnect", () => {
+    console.log("Client disconnected", socket.id)
+    users = users.filter( u => u.id !== socket.id )
+    console.log('uuu222', users);
+  });
+});
+
+
+const socketMiddleware = async (req, res, next) => {
+  console.log('99999', req.body, users);
+  let a = users.filter( u => u.userID === req.body.data.axeCreatorID)
+  console.log(a);
+  req.body.socketID = a[0] ? a[0].id : null
+  await next();
+};
+
+
+// const app = express()
 app.use(cors())
 app.use(bodyParser.json())
-
+app.io = io;
 app.post('/createAccount', UserController.createAccount)
 app.post('/signin', UserController.signIn)
 app.post('/search', SearchController.search)
 app.post('/submitAxe', AxeController.submitAxe)
 app.post('/viewAxe', SearchController.viewAxe)
+app.post('/trade', socketMiddleware, SearchController.trade)
 
-app.get('/', (req, res) => res.send('Hello World!'))
+server.listen(port, () => console.log(`AM backend listening on port ${port}!`))
 
-
-app.listen(port, () => console.log(`AM backend listening on port ${port}!`))
+module.exports = { users }

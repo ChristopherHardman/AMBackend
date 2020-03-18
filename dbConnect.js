@@ -1,14 +1,28 @@
 const Pool = require('pg').Pool
+// const pool = new Pool({
+//   user: 'me',
+//   host: 'localhost',
+//   database: 'am',
+//   password: 'password',
+//   port: 5432,
+// })
 const pool = new Pool({
-  user: 'me',
-  host: 'localhost',
-  database: 'am',
-  password: 'password',
+  user: 'lyltfjkuixdqpr',
+  host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
+  database: 'dekiitsc4t78r4',
+  password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
   port: 5432,
 })
+//"dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
+// Connection URL:
+ //postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
+
+ const bcrypt = require('bcrypt');
+ const saltRounds = 10;
 
 const Sequelize = require('sequelize')
-const sequelize = new Sequelize('postgres://localhost:5432/am')
+// const sequelize = new Sequelize('postgres://localhost:5432/am')
+const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
 sequelize.authenticate().then(() => {
   console.log('Connection has been established successfully.');
 }).catch(err => {
@@ -33,6 +47,27 @@ const User = sequelize.define('users', {
   password: {
     type: Sequelize.STRING,
     allowNull: false
+  },
+  company: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  type: {
+    type: Sequelize.STRING,
+    allowNull: false
+  },
+  customList: {
+    type: Sequelize.ARRAY(Sequelize.STRING),
+    // allowNull: false
+  },
+  id: {
+  // type: Sequelize.UUID,
+  // defaultValue: Sequelize.UUIDV4, // Or Sequelize.UUIDV1,
+  // primaryKey: true
+      allowNull: false,
+      primaryKey: true,
+      type: Sequelize.UUID,
+      defaultValue: Sequelize.UUIDV4
   }
 },
 {
@@ -41,11 +76,8 @@ const User = sequelize.define('users', {
 
 });
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 
-//"dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
-// Connection URL:
- //postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
 
 
   // To add: deltaAmount, deltaCurrency, salesCredit
@@ -59,6 +91,10 @@ const User = sequelize.define('users', {
    currencyPair: {
      type: Sequelize.STRING,
      allowNull: false
+   },
+   excludeList: {
+     type: Sequelize.ARRAY(Sequelize.STRING),
+     // allowNull: false
    },
    product: {
      type: Sequelize.STRING,
@@ -100,10 +136,11 @@ const User = sequelize.define('users', {
      type: Sequelize.STRING,
      allowNull: false
    },
+   userID: {
+     type: Sequelize.STRING,
+     allowNull: false
+   },
   id: {
-  // type: Sequelize.UUID,
-  // defaultValue: Sequelize.UUIDV4, // Or Sequelize.UUIDV1,
-  // primaryKey: true
       allowNull: false,
       primaryKey: true,
       type: Sequelize.UUID,
@@ -162,31 +199,32 @@ const deleteAxe = async (id) => {
   pool.query('DELETE FROM users WHERE id = $1', [id])
 }
 
-
-
-const createAccount = async () => {
-
-  const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
-
-  if (uniqueEmail && uniqueEmail.verified ) return 'Already registered';
-  let firstNameFormatted = firstName.charAt(0).toUpperCase() + firstName.slice(1)
-  let lastNameFormatted = lastName.charAt(0).toUpperCase() + lastName.slice(1)
-
-    uniqueEmail.firstName = firstNameFormatted
-    uniqueEmail.lastName = lastNameFormatted
-    uniqueEmail.status = 'account'
-    uniqueEmail.verified = false
-    await bcrypt.hash(password, saltRounds, function(err,hash){
-      uniqueEmail.password = hash;
-      uniqueEmail.save();
+const createAccount = async (user) => {
+  const uniqueEmail = await User.findAll({where: {email: user.email}})
+  console.log('UE', uniqueEmail);
+  // const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
+  // if (uniqueEmail && uniqueEmail.verified ) return 'Already registered';
+    user.firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)
+    user.lastName = user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)
+    await bcrypt.hash(user.password, saltRounds, function(err,hash){
+      user.password = hash;
+      const newUser = new User(user)
+      newUser.save()
     })
-  return 'Success'
+    return 'Success'
 }
 
-
+const login = async ({email, password}) => {
+  const user = await User.findAll({where: {email: email}})
+  let details = user.map( u => u.dataValues)
+  const same = await bcrypt.compare(password, details[0].password);
+  return same ? details[0] : null
+}
 
 module.exports = {
   addAxe,
   getAxe,
-  getAxes
+  getAxes,
+  createAccount,
+  login
 };
