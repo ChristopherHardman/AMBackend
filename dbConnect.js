@@ -76,7 +76,7 @@ const User = sequelize.define('users', {
 
 });
 
-User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+//User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 
 
 
@@ -151,7 +151,7 @@ User.sync({ force: true }) // Now the `users` table in the database corresponds 
  // options
 
  });
- Axe.sync({ force: true })
+ // Axe.sync({ force: true })
 
 
 
