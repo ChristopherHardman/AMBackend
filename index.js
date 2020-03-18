@@ -24,7 +24,7 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 
-
+app.post('/createAccount', UserController.createAccount)
 app.post('/signin', UserController.signIn)
 app.post('/search', SearchController.search)
 app.post('/submitAxe', AxeController.submitAxe)

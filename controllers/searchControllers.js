@@ -87,7 +87,7 @@ const Samples = [
 const search = async (req, res) => {
   try {
     console.log('search', req.body)
-    // const results = await DB.getAxes()
+    const results = await DB.getAxes(req.body.query)
     // const wss = new WebSocket.Server({ port: 80 });
     // wss.on('connection', function connection(ws, req) {
     //   ws.on('message', function incoming(message) {
@@ -96,8 +96,7 @@ const search = async (req, res) => {
     //   ws.send('something else');
     //   ws.close()
     // });
-
-    setTimeout(()=> res.send(Samples), 500)
+    res.send(results)
 
   } catch (error) {
     console.log('ERROR', error)
@@ -109,8 +108,10 @@ const search = async (req, res) => {
 const viewAxe = async (req, res) => {
   try {
     console.log('search', req.body)
-    let axe = Samples.filter( s => s.id === req.body.axeID)
-    setTimeout(()=> res.send(axe), 500)
+    const { axeID } = req.body;
+    const result = await DB.getAxe(axeID)
+    // let axe = Samples.filter( s => s.id === req.body.axeID)
+    res.send(result)
 
   } catch (error) {
     console.log('ERROR', error)

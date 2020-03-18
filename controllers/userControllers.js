@@ -1,4 +1,18 @@
 
+
+const createAccount = async (req, res) => {
+  try {
+    console.log('Create Account', req.body)
+
+
+  } catch (error) {
+    console.log('ERROR', error)
+    res.sendStatus(500)
+  }
+}
+
+
+
 const signIn = async (req, res) => {
   try {
     console.log('signin', req.body)
@@ -19,4 +33,7 @@ const signIn = async (req, res) => {
   }
 }
 
-module.exports = {signIn};
+module.exports = {
+  createAccount,
+  signIn
+};

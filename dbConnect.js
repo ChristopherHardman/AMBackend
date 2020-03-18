@@ -97,32 +97,53 @@ const User = sequelize.define('users', {
      allowNull: false
    },
    premSettlement: {
-     type: Sequelize.INTEGER,
+     type: Sequelize.STRING,
      allowNull: false
    },
-  // id: {
-  // type: DataTypes.UUID,
-  // defaultValue: Sequelize.UUIDV4 // Or Sequelize.UUIDV1
-  // }
+  id: {
+  // type: Sequelize.UUID,
+  // defaultValue: Sequelize.UUIDV4, // Or Sequelize.UUIDV1,
+  // primaryKey: true
+      allowNull: false,
+      primaryKey: true,
+      type: Sequelize.UUID,
+      defaultValue: Sequelize.UUIDV4
+  }
  },
  {
-
  // options
 
-
  });
-
  // Axe.sync({ force: true })
 
-const getAxes = async () => {
-  // const results = await pool.query('SELECT * FROM users ORDER BY id ASC')
-  const results = await Axe.findAll()
+
+
+const getAxes = async (query) => {
+  console.log('QQQQQ', query);
+  let filterApplied = {
+    where: {}
+  }
+  if (query.callPut) filterApplied.where.callPut = query.callPut
+  if (query.product) filterApplied.where.product = query.product
+  if (query.buySell) filterApplied.where.direction = query.buySell
+  if (query.currencyPair) filterApplied.where.currencyPair = query.currencyPair
+
+  const results = await Axe.findAll(filterApplied)
+  // Filters	Description	Examples
+  // O/N	Only O/N options i.e. 1 day options expiring next day	All options with 1 day expiry
+  // Vanilla G10	Simple options, on developed currencies.  Buyer has right to exercise option on expiry date. 	USD, EUR, JPY, CAD, GBP, CHF, NOK, SEK, AUD, NZD, DKK
+  // Vanilla EM	Simple options, on Emerging Market currencies. Buyer has right to exercise option on expiry date. 	TRT, ZAR, MXN, RUB, PLN, HUF, CNH, ILS, SGD, HKD, CZk, RON, and all NDF currencies (List 3 on "Curency Pairs Tab)
+  // 1st Gen Exotics	Exotic options typically trigger when the currency reaches the strike price. They can have additional features such as knock-outs for example.	Digitals (DIGI), One-Touch (OT), No Touch (NT), Knock-Outs (KO), Knock-in (KI), Reverse Knock Outs(RKO), Window Knock-outs (WKO), Double Knock-Out (DKO)
+  // Vol/Var	Volatility Swap (Vol swap), Variance Swap (Var swap).	1M EURUSD Vol Swap to sell at 9.5%
+  // Correlation 	Correlation Options involve more than one product	Dual & Triple Digitals, Worst-Ofs.
   return results.map( a => a.dataValues)
 }
 
 const getAxe = async (axeID) => {
   // const result =  pool.query('SELECT * FROM users WHERE id = $1', [id])
   const axe = await Axe.findAll({where: {id: axeID}})
+  // console.log(axe.map( a => a.dataValues)[0]);
+  return axe.map( a => a.dataValues);
 }
 
 const addAxe = async (axe) => {
@@ -142,4 +163,30 @@ const deleteAxe = async (id) => {
 }
 
 
-module.exports = { addAxe, getAxes };
+
+const createAccount = async () => {
+
+  const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
+
+  if (uniqueEmail && uniqueEmail.verified ) return 'Already registered';
+  let firstNameFormatted = firstName.charAt(0).toUpperCase() + firstName.slice(1)
+  let lastNameFormatted = lastName.charAt(0).toUpperCase() + lastName.slice(1)
+
+    uniqueEmail.firstName = firstNameFormatted
+    uniqueEmail.lastName = lastNameFormatted
+    uniqueEmail.status = 'account'
+    uniqueEmail.verified = false
+    await bcrypt.hash(password, saltRounds, function(err,hash){
+      uniqueEmail.password = hash;
+      uniqueEmail.save();
+    })
+  return 'Success'
+}
+
+
+
+module.exports = {
+  addAxe,
+  getAxe,
+  getAxes
+};
