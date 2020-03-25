@@ -1,14 +1,15 @@
 const app = require('express')()
 const cors = require('cors')
 const bodyParser = require('body-parser')
+const server = require('http').createServer(app)
+const io = require('socket.io')(server)
 const UserController = require('./controllers/userControllers')
 const SearchController = require('./controllers/searchControllers')
 const AxeController = require('./controllers/axeControllers')
 
 // const app = require('express')();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
-const port = process.env.PORT || 3001;
+
+const port = process.env.PORT || 3001
 
 // const WebSocket = require('ws');
 // const wss = new WebSocket.Server({ port: 8080 });
@@ -23,38 +24,34 @@ const port = process.env.PORT || 3001;
 // })
 // });
 
-
-
 let users = []
 
-io.on("connection", socket => {
-  console.log("New client connected")
-  socket.on("token", (data) => {
+io.on('connection', (socket) => {
+  console.log('New client connected')
+  socket.on('token', (data) => {
     console.log('ddddd', data)
-    users.push({ id : socket.id, userID : data });
-    console.log('UUU', users);
+    users.push({ id: socket.id, userID: data })
+    console.log('UUU', users)
   })
-  socket.on("disconnect", () => {
-    console.log("Client disconnected", socket.id)
-    users = users.filter( u => u.id !== socket.id )
-    console.log('uuu222', users);
-  });
-});
-
+  socket.on('disconnect', () => {
+    console.log('Client disconnected', socket.id)
+    users = users.filter((u) => u.id !== socket.id)
+    console.log('uuu222', users)
+  })
+})
 
 const socketMiddleware = async (req, res, next) => {
-  console.log('99999', req.body, users);
-  let a = users.filter( u => u.userID === req.body.data.axeCreatorID)
-  console.log(a);
+  console.log('99999', req.body, users)
+  const a = users.filter((u) => u.userID === req.body.data.axeCreatorID)
+  console.log(a)
   req.body.socketID = a[0] ? a[0].id : null
-  await next();
-};
-
+  await next()
+}
 
 // const app = express()
 app.use(cors())
 app.use(bodyParser.json())
-app.io = io;
+app.io = io
 app.post('/createAccount', UserController.createAccount)
 app.post('/signin', UserController.signIn)
 app.post('/search', SearchController.search)

@@ -1,10 +1,10 @@
-const DB = require('../dbConnect');
-const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken')
+const DB = require('../dbConnect')
 
 const createAccount = async (req, res) => {
   try {
     console.log('Create Account', req.body)
-    let create = DB.createAccount(req.body);
+    const create = DB.createAccount(req.body)
     res.sendStatus(200)
   } catch (error) {
     console.log('ERROR', error)
@@ -14,30 +14,26 @@ const createAccount = async (req, res) => {
 
 const signIn = async (req, res) => {
   try {
-    let user = await DB.login(req.body)
-    user.token = 123
-    user.token = jwt.sign({
-      data: user.id
-    }, 'AM2020', { expiresIn: 60 * 60 });
-    res.send(user)
-    // const { email, password } = req.body;
-    // if (email === 'banktest@am.com' && password === 'am2020!') {
-    //   res.send({ token: 'token', type: 'bank', firstName: 'Joe', lastName: 'Smith' })
-    // }
-    // if (email === 'clienttest@am.com' && password === 'am2020!') {
-    //   res.send({ token: 'token', type: 'client', firstName: 'Joe', lastName: 'Smith' })
-    // }
-    // if (email !== 'clienttest@am.com' && email !== 'banktest@am.com' && password !== 'am2020!') {
-    //   res.sendStatus(401)
-    // }
-
+    const user = await DB.login(req.body)
+    if (user === 'User not recognised') res.sendStatus(404)
+    if (user === 'Incorrect password') res.sendStatus(403)
+    if (user.email) {
+      user.token = jwt.sign(
+        {
+          data: user.id,
+        },
+        'AM2020',
+        { expiresIn: 60 * 60 }
+      )
+      res.send(user)
+    }
   } catch (error) {
-    console.log('ERROR', error)
+    console.log('SIGNIN ERROR', error)
     res.sendStatus(500)
   }
 }
 
 module.exports = {
   createAccount,
-  signIn
-};
+  signIn,
+}
