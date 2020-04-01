@@ -6,23 +6,9 @@ const io = require('socket.io')(server)
 const UserController = require('./controllers/userControllers')
 const SearchController = require('./controllers/searchControllers')
 const AxeController = require('./controllers/axeControllers')
-
-// const app = require('express')();
+const AdminController = require('./controllers/adminControllers')
 
 const port = process.env.PORT || 3001
-
-// const WebSocket = require('ws');
-// const wss = new WebSocket.Server({ port: 8080 });
-//
-// wss.on('connection', function connection(ws, req) {
-//   ws.on('message', function incoming(message) {
-//     console.log('received: %s', message, wss.clients);
-//     // ws.send('something');
-//     wss.clients.forEach(function each(client) {
-//         client.send('something');
-//   })
-// })
-// });
 
 let users = []
 
@@ -48,17 +34,36 @@ const socketMiddleware = async (req, res, next) => {
   await next()
 }
 
-// const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 app.io = io
+
 app.post('/createAccount', UserController.createAccount)
 app.post('/signin', UserController.signIn)
 app.post('/search', SearchController.search)
 app.post('/submitAxe', AxeController.submitAxe)
+app.patch('/updateAxe', AxeController.updateAxe)
 app.post('/viewAxe', SearchController.viewAxe)
 app.post('/trade', socketMiddleware, SearchController.trade)
+app.get('/getActivity', AdminController.getActivity)
 
 server.listen(port, () => console.log(`AM backend listening on port ${port}!`))
 
 module.exports = { users }
+
+// const app = require('express')();
+
+// const WebSocket = require('ws');
+// const wss = new WebSocket.Server({ port: 8080 });
+//
+// wss.on('connection', function connection(ws, req) {
+//   ws.on('message', function incoming(message) {
+//     console.log('received: %s', message, wss.clients);
+//     // ws.send('something');
+//     wss.clients.forEach(function each(client) {
+//         client.send('something');
+//   })
+// })
+// });
+
+// const app = express()

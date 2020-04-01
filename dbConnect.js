@@ -1,32 +1,30 @@
 const { Pool } = require('pg')
 
-// const pool = new Pool({
-//   user: 'me',
-//   host: 'localhost',
-//   database: 'am',
-//   password: 'password',
-//   port: 5432,
-// })
-const { Op } = require('sequelize')
 const pool = new Pool({
-  user: 'lyltfjkuixdqpr',
-  host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
-  database: 'dekiitsc4t78r4',
-  password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
+  user: 'me',
+  host: 'localhost',
+  database: 'am',
+  password: 'password',
   port: 5432,
 })
+const { Op } = require('sequelize')
+// const pool = new Pool({
+//   user: 'lyltfjkuixdqpr',
+//   host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
+//   database: 'dekiitsc4t78r4',
+//   password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
+//   port: 5432,
+// })
 // "dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
 // Connection URL:
 // postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
 
 const bcrypt = require('bcrypt')
-
 const saltRounds = 10
-
 const Sequelize = require('sequelize')
 
-//const sequelize = new Sequelize('postgres://localhost:5432/am')
-const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
+const sequelize = new Sequelize('postgres://localhost:5432/am')
+// const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
 sequelize
   .authenticate()
   .then(() => {
@@ -36,131 +34,19 @@ sequelize
     console.error('Unable to connect to the database:', err)
   })
 
-const User = sequelize.define(
-  'users',
-  {
-    firstName: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    lastName: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    email: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    password: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    company: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    type: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    customList: {
-      type: Sequelize.ARRAY(Sequelize.STRING),
-      // allowNull: false
-    },
-    id: {
-      // type: Sequelize.UUID,
-      // defaultValue: Sequelize.UUIDV4, // Or Sequelize.UUIDV1,
-      // primaryKey: true
-      allowNull: false,
-      primaryKey: true,
-      type: Sequelize.UUID,
-      defaultValue: Sequelize.UUIDV4,
-    },
-  },
-  {
-    // options
-  }
-)
+const Axe = sequelize.import(`${__dirname}/models/axeModel`)
+const User = sequelize.import(`${__dirname}/models/userModel`)
+const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+Axe.sync({ force: true })
+Tracker.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
-
-const Axe = sequelize.define(
-  'axes',
-  {
-    traderName: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    currencyPair: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    excludeList: {
-      type: Sequelize.ARRAY(Sequelize.STRING),
-      // allowNull: false
-    },
-    product: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    direction: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    notional: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    date: {
-      type: Sequelize.DATE,
-      allowNull: false,
-    },
-    strike: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    callPut: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    volPrice: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    spot: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    prem: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-    },
-    premSettlement: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    userID: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    category: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
-    id: {
-      allowNull: false,
-      primaryKey: true,
-      type: Sequelize.UUID,
-      defaultValue: Sequelize.UUIDV4,
-    },
-  },
-  {
-    // options
-  }
-)
-Axe.sync({ force: true })
+const recordActivity = async (type, user) => {
+  const newEvent = new Tracker({ type, user })
+  await newEvent.save()
+}
 
 const generateFilter = (query) => {
   const DateOptions = {
@@ -178,6 +64,7 @@ const generateFilter = (query) => {
   const filter = {
     where: {},
   }
+  // filter.where.status = 'active'
   if (query.callPut) filter.where.callPut = query.callPut
   if (query.product) filter.where.product = query.product
   if (query.buySell) filter.where.direction = query.buySell
@@ -190,7 +77,6 @@ const generateFilter = (query) => {
     const end = endDate
     start.setHours(0, 0, 0, 0)
     end.setHours(23, 59, 59, 999)
-    console.log('SE', start, end)
     filter.where.date = { [Op.between]: [start, end] }
   }
   if (query.filter) {
@@ -205,7 +91,6 @@ const generateFilter = (query) => {
     }
     if (query.filter !== 'O/N') filter.where.category = query.filter
   }
-  console.log('Filter', filter)
   return filter
   // Filters	Description	Examples
   // O/N	Only O/N options i.e. 1 day options expiring next day	All options with 1 day expiry
@@ -249,13 +134,63 @@ const categoriseAxe = (axe) => {
 
 const addAxe = async (axe) => {
   axe.category = categoriseAxe(axe)
+  axe.status = 'active'
+  axe.created = new Date()
   const newAxe = new Axe(axe)
   await newAxe.save()
+  recordActivity('New Axe Created', axe.userID)
+
 }
 
-const updateAxe = async (axeID) => {
-  const axe = await Axe.findAll({ where: { id: axeID } })
-  // update and save
+const updateAxe = async (axe) => {
+  const {
+    traderName,
+    currencyPair,
+    excludeList,
+    product,
+    direction,
+    notional,
+    date,
+    strike,
+    callPut,
+    volPrice,
+    spot,
+    premium,
+    premiumCurrency,
+    KOStrike,
+    minimumTrade,
+    category,
+    status,
+    cut,
+    delta,
+  } = axe
+
+  const update = await Axe.update(
+    {
+      traderName,
+      currencyPair,
+      excludeList,
+      product,
+      direction,
+      notional,
+      date,
+      strike,
+      callPut,
+      volPrice,
+      spot,
+      premium,
+      premiumCurrency,
+      KOStrike,
+      minimumTrade,
+      category,
+      status,
+      cut,
+      delta,
+    },
+    { where: { id: axe.id } }
+  )
+  if (update[0] === 1) return 'success'
+  return null
 }
 
 const deleteAxe = async (axeID) => {
@@ -280,6 +215,7 @@ const login = async ({ email, password }) => {
   const user = await User.findAll({ where: { email } })
   if (user.length === 0) return 'User not recognised'
   const details = user.map((u) => u.dataValues)
+  recordActivity('Login', details[0].id)
   const same = await bcrypt.compare(password, details[0].password)
   return same ? details[0] : 'Incorrect password'
 }
@@ -289,11 +225,142 @@ const getUser = async (userID) => {
   return user.map((a) => a.dataValues)[0]
 }
 
+
+const getActivity = async () => {
+  const results = await Tracker.findAll()
+  return results.map((a) => a.dataValues)
+}
+
+
 module.exports = {
   addAxe,
   getAxe,
   getAxes,
   createAccount,
   login,
-  getUser
+  getUser,
+  getActivity,
+  updateAxe,
 }
+
+// const User = sequelize.define(
+//   'users',
+//   {
+//     firstName: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     lastName: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     email: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     password: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     company: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     type: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     customList: {
+//       type: Sequelize.ARRAY(Sequelize.STRING),
+//       // allowNull: false
+//     },
+//     id: {
+//       // type: Sequelize.UUID,
+//       // defaultValue: Sequelize.UUIDV4, // Or Sequelize.UUIDV1,
+//       // primaryKey: true
+//       allowNull: false,
+//       primaryKey: true,
+//       type: Sequelize.UUID,
+//       defaultValue: Sequelize.UUIDV4,
+//     },
+//   },
+//   {
+//     // options
+//   }
+// )
+
+// const Axe = sequelize.define(
+//   'axes',
+//   {
+//     traderName: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     currencyPair: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     excludeList: {
+//       type: Sequelize.ARRAY(Sequelize.STRING),
+//       // allowNull: false
+//     },
+//     product: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     direction: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     notional: {
+//       type: Sequelize.INTEGER,
+//       allowNull: false,
+//     },
+//     date: {
+//       type: Sequelize.DATE,
+//       allowNull: false,
+//     },
+//     strike: {
+//       type: Sequelize.INTEGER,
+//       allowNull: false,
+//     },
+//     callPut: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     volPrice: {
+//       type: Sequelize.INTEGER,
+//       allowNull: false,
+//     },
+//     spot: {
+//       type: Sequelize.INTEGER,
+//       allowNull: false,
+//     },
+//     premium: {
+//       type: Sequelize.INTEGER,
+//       allowNull: false,
+//     },
+//     premiumCurrency: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     userID: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     category: {
+//       type: Sequelize.STRING,
+//       allowNull: false,
+//     },
+//     id: {
+//       allowNull: false,
+//       primaryKey: true,
+//       type: Sequelize.UUID,
+//       defaultValue: Sequelize.UUIDV4,
+//     },
+//   },
+//   {
+//     // options
+//   }
+// )
+// Axe.sync({ force: true })

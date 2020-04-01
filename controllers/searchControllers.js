@@ -34,7 +34,7 @@ const trade = async (req, res) => {
     req.body.socketID &&
       req.app.io
         .to(req.body.socketID)
-        .emit('FromAPI', { firstName, lastName, company, axeID })
+        .emit('TradeRequest', { firstName, lastName, company, axeID })
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)
