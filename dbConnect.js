@@ -39,8 +39,8 @@ const User = sequelize.import(`${__dirname}/models/userModel`)
 const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-Axe.sync({ force: true })
-Tracker.sync({ force: true })
+//Axe.sync({ force: true })
+//Tracker.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
