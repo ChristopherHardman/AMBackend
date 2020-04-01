@@ -1,20 +1,20 @@
 const { Pool } = require('pg')
 
-const pool = new Pool({
-  user: 'me',
-  host: 'localhost',
-  database: 'am',
-  password: 'password',
-  port: 5432,
-})
-const { Op } = require('sequelize')
 // const pool = new Pool({
-//   user: 'lyltfjkuixdqpr',
-//   host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
-//   database: 'dekiitsc4t78r4',
-//   password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
+//   user: 'me',
+//   host: 'localhost',
+//   database: 'am',
+//   password: 'password',
 //   port: 5432,
 // })
+const { Op } = require('sequelize')
+const pool = new Pool({
+  user: 'lyltfjkuixdqpr',
+  host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
+  database: 'dekiitsc4t78r4',
+  password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
+  port: 5432,
+})
 // "dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
 // Connection URL:
 // postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
@@ -23,8 +23,8 @@ const bcrypt = require('bcrypt')
 const saltRounds = 10
 const Sequelize = require('sequelize')
 
-const sequelize = new Sequelize('postgres://localhost:5432/am')
-// const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
+// const sequelize = new Sequelize('postgres://localhost:5432/am')
+const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
 sequelize
   .authenticate()
   .then(() => {
@@ -38,9 +38,9 @@ const Axe = sequelize.import(`${__dirname}/models/axeModel`)
 const User = sequelize.import(`${__dirname}/models/userModel`)
 const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 
-User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-Axe.sync({ force: true })
-Tracker.sync({ force: true })
+// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+// Axe.sync({ force: true })
+// Tracker.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
