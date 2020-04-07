@@ -22,7 +22,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected', socket.id)
     users = users.filter((u) => u.id !== socket.id)
-    console.log('uuu222', users)
   })
 })
 
@@ -46,6 +45,8 @@ app.patch('/updateAxe', AxeController.updateAxe)
 app.post('/viewAxe', SearchController.viewAxe)
 app.post('/trade', socketMiddleware, SearchController.trade)
 app.get('/getActivity', AdminController.getActivity)
+app.post('/addCompany', AdminController.addCompany)
+app.get('/getCompanies', AdminController.getCompanies)
 
 server.listen(port, () => console.log(`AM backend listening on port ${port}!`))
 

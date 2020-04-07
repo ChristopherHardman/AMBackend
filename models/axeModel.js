@@ -4,6 +4,10 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    company: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
     currencyPair: {
       type: Sequelize.STRING,
       allowNull: false,
@@ -73,10 +77,6 @@ module.exports = (sequelize, Sequelize) => {
       primaryKey: true,
       type: Sequelize.UUID,
       defaultValue: Sequelize.UUIDV4,
-    },
-    created: {
-      allowNull: false,
-      type: Sequelize.DATE,
     },
     status: {
       type: Sequelize.STRING,

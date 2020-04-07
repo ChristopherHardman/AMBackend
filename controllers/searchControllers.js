@@ -4,7 +4,7 @@ const users = require('../index.js')
 const search = async (req, res) => {
   try {
     console.log('search', req.body)
-    const results = await DB.getAxes(req.body.query)
+    const results = await DB.getAxes(req.body)
     res.send(results)
   } catch (error) {
     console.log('ERROR', error)
