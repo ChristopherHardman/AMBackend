@@ -1,30 +1,13 @@
-const { Pool } = require('pg')
-
-const pool = new Pool({
-  user: 'me',
-  host: 'localhost',
-  database: 'am',
-  password: 'password',
-  port: 5432,
-})
-const { Op } = require('sequelize')
-// const pool = new Pool({
-//   user: 'lyltfjkuixdqpr',
-//   host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
-//   database: 'dekiitsc4t78r4',
-//   password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
-//   port: 5432,
-// })
-// "dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
-// Connection URL:
-// postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
-
+const { Sequelize, Op } = require('sequelize')
 const bcrypt = require('bcrypt')
 
 const saltRounds = 10
-const Sequelize = require('sequelize')
-
-const sequelize = new Sequelize('postgres://localhost:5432/am')
+const Environment = 'development'
+const sequelize = new Sequelize(
+  Environment === 'test'
+    ? 'postgres://localhost:5432/am'
+    : 'postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4'
+)
 // const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
 sequelize
   .authenticate()
@@ -40,10 +23,10 @@ const User = sequelize.import(`${__dirname}/models/userModel`)
 const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 const Company = sequelize.import(`${__dirname}/models/companyModel`)
 
-//User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 Axe.sync({ force: true })
-// Tracker.sync({ force: true })
-// Company.sync({ force: true })
+Tracker.sync({ force: true })
+Company.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
@@ -52,7 +35,6 @@ const recordActivity = async (type, user) => {
 }
 
 const generateFilter = (query, type, companyID) => {
-  console.log('&&&&', query, type, id);
   const DateOptions = {
     'O/N': 1,
     '<1w': 7,
@@ -73,7 +55,7 @@ const generateFilter = (query, type, companyID) => {
   if (query.product) filter.where.product = query.product
   if (query.buySell) filter.where.direction = query.buySell
   if (type === 'Bank') filter.where.company = companyID
-  if (type !== 'Bank') filter.where.exclideList = { [Op.notIn]: [companyID] }
+  // if (type !== 'Bank') filter.where.excludeList = { [Op.notIn]: [companyID] }
   if (query.currencyPair) filter.where.currencyPair = query.currencyPair
   if (query.date) {
     // How should we apply month calculation?
@@ -109,10 +91,12 @@ const generateFilter = (query, type, companyID) => {
 
 const getAxes = async (request) => {
   const { query, userID, company } = request
-  const {type, id} = await getCompany(company)
+  const { type, id } = await getCompany(company)
   const filterApplied = generateFilter(query, type, id)
   const results = await Axe.findAll(filterApplied)
-  return results.map((a) => a.dataValues)
+  let array = results.map((a) => a.dataValues)
+  if (type !== 'Bank') array = array.filter(a => !a.excludeList.includes(company))
+  return array
 }
 
 const getAxe = async (axeID) => {
@@ -200,9 +184,6 @@ const updateAxe = async (axe) => {
   return null
 }
 
-const deleteAxe = async (axeID) => {
-  pool.query('DELETE FROM users WHERE id = $1', [id])
-}
 
 const createAccount = async (user) => {
   const uniqueEmail = await User.findAll({ where: { email: user.email } })
@@ -269,6 +250,7 @@ module.exports = {
   addCompany,
   getAxe,
   getAxes,
+  getCompany,
   createAccount,
   login,
   getUser,
@@ -276,3 +258,29 @@ module.exports = {
   getCompanies,
   updateAxe,
 }
+
+// const  = require('sequelize')
+// const { Pool } = require('pg')
+//
+// const pool = new Pool({
+//   user: 'me',
+//   host: 'localhost',
+//   database: 'am',
+//   password: 'password',
+//   port: 5432,
+// })
+// const pool = new Pool({
+//   user: 'lyltfjkuixdqpr',
+//   host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
+//   database: 'dekiitsc4t78r4',
+//   password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
+//   port: 5432,
+// })
+// "dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
+// Connection URL:
+// postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
+
+//
+// const deleteAxe = async (axeID) => {
+//   pool.query('DELETE FROM users WHERE id = $1', [id])
+// }

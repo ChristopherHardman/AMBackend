@@ -19,6 +19,18 @@ io.on('connection', (socket) => {
     users.push({ id: socket.id, userID: data })
     console.log('UUU', users)
   })
+  socket.on('pickup', (data) => {
+    console.log('Pickup', data)
+    io.emit('Pickup', 'Pickup')
+    // users.push({ id: socket.id, userID: data })
+    // console.log('UUU', users)
+  })
+  socket.on('tradeConfirmed', () => {
+    console.log('Trade Confirmed')
+    io.emit('TradeConfirmed', 'TradeConfirmed')
+    // users.push({ id: socket.id, userID: data })
+    // console.log('UUU', users)
+  })
   socket.on('disconnect', () => {
     console.log('Client disconnected', socket.id)
     users = users.filter((u) => u.id !== socket.id)

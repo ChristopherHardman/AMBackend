@@ -30,11 +30,12 @@ const trade = async (req, res) => {
     console.log('Trade', req.body)
     const { userID, axeID } = req.body.data
     const { firstName, lastName, company } = await DB.getUser(userID)
-    console.log(firstName, lastName, company, axeID)
+    const {name} = await DB.getCompany(company)
+    // console.log('888877', firstName, lastName, company, axeID, CCC)
     req.body.socketID &&
       req.app.io
         .to(req.body.socketID)
-        .emit('TradeRequest', { firstName, lastName, company, axeID })
+        .emit('TradeRequest', { firstName, lastName, company: name, axeID })
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)

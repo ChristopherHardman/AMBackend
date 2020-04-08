@@ -7,7 +7,7 @@ const createAccount = async (req, res) => {
     const create = DB.createAccount(req.body)
     res.sendStatus(200)
   } catch (error) {
-    console.log('ERROR', error)
+    console.log('CREAT ACCOUNT ERROR', error)
     res.sendStatus(500)
   }
 }
@@ -25,6 +25,7 @@ const signIn = async (req, res) => {
         'AM2020',
         { expiresIn: 60 * 60 }
       )
+      user.clients = await DB.getCompanies()
       res.send(user)
     }
   } catch (error) {
