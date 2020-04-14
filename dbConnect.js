@@ -2,13 +2,12 @@ const { Sequelize, Op } = require('sequelize')
 const bcrypt = require('bcrypt')
 
 const saltRounds = 10
-const Environment = 'development'
+const Environment = 'test'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
     : 'postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4'
 )
-// const sequelize = new Sequelize('postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4')
 sequelize
   .authenticate()
   .then(() => {
@@ -211,13 +210,28 @@ const login = async ({ email, password }) => {
     const dataToSend = {
       firstName: details.firstName,
       lastName: details.lastName,
-      id: details.id,
+      _id: details.id,
       email: details.email,
       company: details.company,
       type: company.type
     }
     return dataToSend
   }
+}
+
+const addCustomList = async ({ userID, listName, list }) => {
+  const user = await User.findAll({ where: { id: userID } })
+  if (user.length === 0) return 'User not recognised'
+  // const details = user.map((u) => u.dataValues)[0]
+  const newList = {
+    name: listName,
+    list,
+    created: new Date()
+  }
+  user.update({ customLists: user.customLists.push(newList) })
+  user.save()
+  const updatedUser = await User.findAll({ where: { id: userID } })
+  return updatedUser.map((u) => u.dataValues)[0].customLists
 }
 
 const getUser = async (userID) => {
@@ -248,6 +262,7 @@ const getCompany = async (companyID) => {
 module.exports = {
   addAxe,
   addCompany,
+  addCustomList,
   getAxe,
   getAxes,
   getCompany,

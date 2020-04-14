@@ -34,7 +34,28 @@ const signIn = async (req, res) => {
   }
 }
 
+const customList = async (req, res) => {
+  try {
+    console.log('CUSTOM LIST', req.body);
+    const newList = await DB.addCustomList(req.body)
+  } catch (error) {
+    console.log('SIGNIN ERROR', error)
+    res.sendStatus(500)
+  }
+}
+
+const createAlert = async (req, res) => {
+  try {
+    console.log('CREATE ALERT', req.body);
+  } catch (error) {
+    console.log('SIGNIN ERROR', error)
+    res.sendStatus(500)
+  }
+}
+
 module.exports = {
   createAccount,
+  createAlert,
+  customList,
   signIn,
 }

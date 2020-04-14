@@ -3,10 +3,11 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const server = require('http').createServer(app)
 const io = require('socket.io')(server)
-const UserController = require('./controllers/userControllers')
-const SearchController = require('./controllers/searchControllers')
-const AxeController = require('./controllers/axeControllers')
 const AdminController = require('./controllers/adminControllers')
+const AxeController = require('./controllers/axeControllers')
+const SearchController = require('./controllers/searchControllers')
+const TradeController = require('./controllers/tradeControllers')
+const UserController = require('./controllers/userControllers')
 
 const port = process.env.PORT || 3001
 
@@ -49,34 +50,25 @@ app.use(cors())
 app.use(bodyParser.json())
 app.io = io
 
+// Admin
 app.post('/createAccount', UserController.createAccount)
-app.post('/signin', UserController.signIn)
-app.post('/search', SearchController.search)
-app.post('/submitAxe', AxeController.submitAxe)
-app.patch('/updateAxe', AxeController.updateAxe)
-app.post('/viewAxe', SearchController.viewAxe)
-app.post('/trade', socketMiddleware, SearchController.trade)
 app.get('/getActivity', AdminController.getActivity)
 app.post('/addCompany', AdminController.addCompany)
 app.get('/getCompanies', AdminController.getCompanies)
 
+// User
+app.post('/signin', UserController.signIn)
+app.post('/customList', UserController.customList)
+
+// Search
+app.post('/search', SearchController.search)
+app.post('/submitAxe', AxeController.submitAxe)
+app.patch('/updateAxe', AxeController.updateAxe)
+app.post('/viewAxe', SearchController.viewAxe)
+
+// Trade
+app.post('/trade', socketMiddleware, TradeController.trade)
+
 server.listen(port, () => console.log(`AM backend listening on port ${port}!`))
 
 module.exports = { users }
-
-// const app = require('express')();
-
-// const WebSocket = require('ws');
-// const wss = new WebSocket.Server({ port: 8080 });
-//
-// wss.on('connection', function connection(ws, req) {
-//   ws.on('message', function incoming(message) {
-//     console.log('received: %s', message, wss.clients);
-//     // ws.send('something');
-//     wss.clients.forEach(function each(client) {
-//         client.send('something');
-//   })
-// })
-// });
-
-// const app = express()

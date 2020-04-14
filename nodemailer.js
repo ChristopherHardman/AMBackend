@@ -20,8 +20,8 @@ const confirmTrade = (email) => {
       pool: true,
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD,
+        user: 'confirmations@axedmarkets.com',
+        pass: 'Axed123!',
       },
     })
 
@@ -34,7 +34,7 @@ const confirmTrade = (email) => {
       const htmlToSend = template(replacements)
 
       const mailOptions = {
-        from: '"Axed Markets" <info@am.com>',
+        from: '"Axed Markets" <confirmations@axedmarkets.com>',
         to: email,
         subject: 'Confirmation of trade',
         text: 'Confirmation of trade',
