@@ -3,7 +3,6 @@ const DB = require('../dbConnect')
 
 const createAccount = async (req, res) => {
   try {
-    console.log('Create Account', req.body)
     const create = DB.createAccount(req.body)
     res.sendStatus(200)
   } catch (error) {
@@ -36,10 +35,9 @@ const signIn = async (req, res) => {
 
 const customList = async (req, res) => {
   try {
-    console.log('CUSTOM LIST', req.body);
     const newList = await DB.addCustomList(req.body)
+    res.send(newList)
   } catch (error) {
-    console.log('SIGNIN ERROR', error)
     res.sendStatus(500)
   }
 }
@@ -48,7 +46,6 @@ const createAlert = async (req, res) => {
   try {
     console.log('CREATE ALERT', req.body);
   } catch (error) {
-    console.log('SIGNIN ERROR', error)
     res.sendStatus(500)
   }
 }

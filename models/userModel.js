@@ -20,14 +20,6 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
       allowNull: false,
     },
-    // type: {
-    //   type: Sequelize.STRING,
-    //   allowNull: false,
-    // },
-    customList: {
-      type: Sequelize.ARRAY(Sequelize.STRING),
-      // allowNull: false
-    },
     id: {
       allowNull: false,
       primaryKey: true,

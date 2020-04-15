@@ -14,23 +14,26 @@ const port = process.env.PORT || 3001
 let users = []
 
 io.on('connection', (socket) => {
-  console.log('New client connected')
   socket.on('token', (data) => {
-    console.log('ddddd', data)
     users.push({ id: socket.id, userID: data })
-    console.log('UUU', users)
   })
   socket.on('pickup', (data) => {
-    console.log('Pickup', data)
     io.emit('Pickup', 'Pickup')
-    // users.push({ id: socket.id, userID: data })
-    // console.log('UUU', users)
+  })
+  socket.on('submitChanges', (data) => {
+    console.log('Submit Changes', data)
+    io.emit('submitChanges', data)
   })
   socket.on('tradeConfirmed', () => {
-    console.log('Trade Confirmed')
     io.emit('TradeConfirmed', 'TradeConfirmed')
-    // users.push({ id: socket.id, userID: data })
-    // console.log('UUU', users)
+  })
+  socket.on('TradeConfirmedClient', () => {
+    console.log('TCC')
+    io.emit('TradeConfirmedClient')
+  })
+  socket.on('Cancel', () => {
+    console.log('Cancel')
+    io.emit('Cancel', 'Cancel')
   })
   socket.on('disconnect', () => {
     console.log('Client disconnected', socket.id)
@@ -38,10 +41,9 @@ io.on('connection', (socket) => {
   })
 })
 
+//
 const socketMiddleware = async (req, res, next) => {
-  console.log('99999', req.body, users)
   const a = users.filter((u) => u.userID === req.body.data.axeCreatorID)
-  console.log(a)
   req.body.socketID = a[0] ? a[0].id : null
   await next()
 }

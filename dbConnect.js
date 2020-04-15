@@ -2,7 +2,7 @@ const { Sequelize, Op } = require('sequelize')
 const bcrypt = require('bcrypt')
 
 const saltRounds = 10
-const Environment = 'test'
+const Environment = 'development'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -21,11 +21,13 @@ const Axe = sequelize.import(`${__dirname}/models/axeModel`)
 const User = sequelize.import(`${__dirname}/models/userModel`)
 const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 const Company = sequelize.import(`${__dirname}/models/companyModel`)
+const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 // Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
+// CustomList.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
@@ -93,14 +95,23 @@ const getAxes = async (request) => {
   const { type, id } = await getCompany(company)
   const filterApplied = generateFilter(query, type, id)
   const results = await Axe.findAll(filterApplied)
-  let array = results.map((a) => a.dataValues)
-  if (type !== 'Bank') array = array.filter(a => !a.excludeList.includes(company))
-  return array
+  const array = results.map((a) => a.dataValues)
+  // Remove sensitive information and any axes that a company has been excluded from
+  if (type !== 'Bank') {
+    const newArray = array
+      .filter((a) => !a.excludeList.includes(company))
+      .map(({ traderName, company, excludeList, userID, ...axe }) => axe)
+      return newArray
+  }
+  if (type === 'Bank') return array
 }
 
 const getAxe = async (axeID) => {
-  const axe = await Axe.findAll({ where: { id: axeID } })
-  return axe.map((a) => a.dataValues)
+  // const axe = await Axe.findAll({ where: { id: axeID } })
+  const axe = await Axe.findByPk(axeID)
+  axe.views = axe.views ? axe.views + 1 : 1
+  await axe.save()
+  return axe
 }
 
 const categoriseAxe = (axe) => {
@@ -122,7 +133,6 @@ const categoriseAxe = (axe) => {
   if (G10.includes(currency1) && G10.includes(currency2)) return 'Vanilla (G10)'
   return 'Vanilla (EM)'
 }
-
 
 const addAxe = async (axe) => {
   axe.category = categoriseAxe(axe)
@@ -183,7 +193,6 @@ const updateAxe = async (axe) => {
   return null
 }
 
-
 const createAccount = async (user) => {
   const uniqueEmail = await User.findAll({ where: { email: user.email } })
   // const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
@@ -207,31 +216,33 @@ const login = async ({ email, password }) => {
   if (!same) return 'Incorrect password'
   if (same) {
     const company = await getCompany(details.company)
+    const customLists = company.customLists
+      ? await getCustomLists(company.customLists)
+      : []
     const dataToSend = {
       firstName: details.firstName,
       lastName: details.lastName,
-      _id: details.id,
+      id: details.id,
       email: details.email,
       company: details.company,
-      type: company.type
+      customLists,
+      type: company.type,
     }
     return dataToSend
   }
 }
 
-const addCustomList = async ({ userID, listName, list }) => {
-  const user = await User.findAll({ where: { id: userID } })
-  if (user.length === 0) return 'User not recognised'
-  // const details = user.map((u) => u.dataValues)[0]
-  const newList = {
-    name: listName,
-    list,
-    created: new Date()
-  }
-  user.update({ customLists: user.customLists.push(newList) })
-  user.save()
-  const updatedUser = await User.findAll({ where: { id: userID } })
-  return updatedUser.map((u) => u.dataValues)[0].customLists
+const addCustomList = async ({ userID, company, listName, list }) => {
+  if (!userID || !company || !listName || !list) return
+  const AAA = await Company.findByPk(company)
+  if (!AAA) return 'Company not recognised'
+  const newCL = new CustomList({ name: listName, company, list, user: userID })
+  await newCL.save()
+  AAA.customLists = AAA.customLists ? [...AAA.customLists, newCL.id] : [newCL.id]
+  await AAA.save()
+  const BBB = await Company.findByPk(company)
+  const newCustomLists = await getCustomLists(BBB.customLists)
+  return {customLists: newCustomLists}
 }
 
 const getUser = async (userID) => {
@@ -259,6 +270,17 @@ const getCompany = async (companyID) => {
   return user.map((a) => a.dataValues)[0]
 }
 
+const getCustomLists = async (listIDs) => {
+  const lists = await CustomList.findAll({
+    where: {
+      id: {
+        [Op.or]: listIDs,
+      },
+    },
+  })
+  return lists
+}
+
 module.exports = {
   addAxe,
   addCompany,
@@ -273,29 +295,3 @@ module.exports = {
   getCompanies,
   updateAxe,
 }
-
-// const  = require('sequelize')
-// const { Pool } = require('pg')
-//
-// const pool = new Pool({
-//   user: 'me',
-//   host: 'localhost',
-//   database: 'am',
-//   password: 'password',
-//   port: 5432,
-// })
-// const pool = new Pool({
-//   user: 'lyltfjkuixdqpr',
-//   host: 'ec2-46-137-84-173.eu-west-1.compute.amazonaws.com',
-//   database: 'dekiitsc4t78r4',
-//   password: 'd5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2',
-//   port: 5432,
-// })
-// "dbname=dekiitsc4t78r4 host=ec2-46-137-84-173.eu-west-1.compute.amazonaws.com port=5432 user=lyltfjkuixdqpr password=d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2 sslmode=require"
-// Connection URL:
-// postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4
-
-//
-// const deleteAxe = async (axeID) => {
-//   pool.query('DELETE FROM users WHERE id = $1', [id])
-// }

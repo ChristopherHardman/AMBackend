@@ -10,13 +10,13 @@ const Email = require('../nodemailer')
 const trade = async (req, res) => {
   try {
     console.log('Trade', req.body)
-    const { userID, axeID } = req.body.data
+    const { userID, axeID, amount } = req.body.data
     const { firstName, lastName, company } = await DB.getUser(userID)
     const {name} = await DB.getCompany(company)
     req.body.socketID &&
       req.app.io
         .to(req.body.socketID)
-        .emit('TradeRequest', { firstName, lastName, company: name, axeID })
+        .emit('TradeRequest', { firstName, lastName, company: name, axeID, amount })
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)

@@ -1,16 +1,20 @@
 module.exports = (sequelize, Sequelize) => {
-  return sequelize.define('Company', {
-    type: {
-      type: Sequelize.STRING,
-      allowNull: false,
-    },
+  return sequelize.define('CustomList', {
     name: {
       type: Sequelize.STRING,
       allowNull: false,
     },
-    customLists: {
+    company: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    user: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    list: {
       type: Sequelize.ARRAY(Sequelize.STRING),
-      allowNull: true,
+      allowNull: false,
     },
     id: {
       allowNull: false,

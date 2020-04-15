@@ -29,7 +29,7 @@ const confirmTrade = (email) => {
       const template = handlebars.compile(html)
 
       const replacements = {
-        introduction: 'Hi there',
+        introduction: 'We are delighted to confirm your recent trade agreed on Axed Markets',
       }
       const htmlToSend = template(replacements)
 
