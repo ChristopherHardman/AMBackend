@@ -23,11 +23,11 @@ const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 
-User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-Axe.sync({ force: true })
-Tracker.sync({ force: true })
-Company.sync({ force: true })
-CustomList.sync({ force: true })
+// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+// Axe.sync({ force: true })
+// Tracker.sync({ force: true })
+// Company.sync({ force: true })
+// CustomList.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
