@@ -23,8 +23,8 @@ const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
@@ -194,6 +194,7 @@ const updateAxe = async (axe) => {
 }
 
 const createAccount = async (user) => {
+  console.log('UUUUU', user);
   const uniqueEmail = await User.findAll({ where: { email: user.email } })
   // const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
   // if (uniqueEmail && uniqueEmail.verified ) return 'Already registered';
@@ -226,7 +227,7 @@ const login = async ({ email, password }) => {
       email: details.email,
       company: details.company,
       customLists,
-      type: company.type,
+      type: details.type,
     }
     return dataToSend
   }

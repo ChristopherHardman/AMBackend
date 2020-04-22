@@ -1,16 +1,15 @@
 const Sequelize = require('sequelize')
 const dbConnect = require('../dbConnect')
 
-beforeAll(() => {
-  const sequelize = new Sequelize('postgres://localhost:5432/am')
-  sequelize
-    .authenticate()
-    .then(() => {
-      console.log('Connection has been established successfully.')
-    })
-    .catch((err) => {
-      console.error('Unable to connect to the database:', err)
-    })
+beforeAll(async () => {
+  const sequelize = await new Sequelize('postgres://localhost:5432/am')
+  await sequelize.authenticate()
+  // .then(() => {
+  //   console.log('Connection has been established successfully.')
+  // })
+  // .catch((err) => {
+  //   console.error('Unable to connect to the database:', err)
+  // })
 })
 
 afterAll(() => {
@@ -18,7 +17,7 @@ afterAll(() => {
 })
 
 test('search with no filter should return multiple axes', async () => {
-  const results = await dbConnect.Axes({})
+  const results = await dbConnect.getAxes({})
   console.log('RRRRRRRR', results)
   // const check = results.filter(
   //   (r) => r.title && r.summary && r.userFirstName && r.userLastName

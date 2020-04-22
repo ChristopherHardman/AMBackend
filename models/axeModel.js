@@ -56,6 +56,14 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    cut: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    delta: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     KOStrike: {
       type: Sequelize.INTEGER,
       allowNull: true,
