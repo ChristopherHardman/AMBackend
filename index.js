@@ -8,6 +8,7 @@ const AxeController = require('./controllers/axeControllers')
 const SearchController = require('./controllers/searchControllers')
 const TradeController = require('./controllers/tradeControllers')
 const UserController = require('./controllers/userControllers')
+const Email = require('./nodemailer')
 
 const port = process.env.PORT || 3001
 
@@ -30,6 +31,7 @@ io.on('connection', (socket) => {
   socket.on('TradeConfirmedClient', () => {
     console.log('TCC')
     io.emit('TradeConfirmedClient')
+    // Email.confirmTrade('confirmations@axedmarkets.com')
   })
   socket.on('Cancel', () => {
     console.log('Cancel')
@@ -43,7 +45,8 @@ io.on('connection', (socket) => {
 
 //
 const socketMiddleware = async (req, res, next) => {
-  const a = users.filter((u) => u.userID === req.body.data.axeCreatorID)
+  console.log('rrrr', req.body);
+  const a = users.filter((u) => u.userID === req.body.data1.axeCreatorID)
   req.body.socketID = a[0] ? a[0].id : null
   await next()
 }
@@ -61,6 +64,7 @@ app.get('/getCompanies', AdminController.getCompanies)
 // User
 app.post('/signin', UserController.signIn)
 app.post('/customList', UserController.customList)
+app.post('/deleteCustomList', UserController.deleteCustomList)
 
 // Search
 app.post('/search', SearchController.search)

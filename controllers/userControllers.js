@@ -42,6 +42,15 @@ const customList = async (req, res) => {
   }
 }
 
+const deleteCustomList = async (req, res) => {
+  try {
+    const newList = await DB.deleteCustomList(req.body)
+    res.send(newList)
+  } catch (error) {
+    res.sendStatus(500)
+  }
+}
+
 const createAlert = async (req, res) => {
   try {
     console.log('CREATE ALERT', req.body);
@@ -54,5 +63,6 @@ module.exports = {
   createAccount,
   createAlert,
   customList,
+  deleteCustomList,
   signIn,
 }

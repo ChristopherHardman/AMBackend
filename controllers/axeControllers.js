@@ -4,8 +4,8 @@ const DB = require('../dbConnect')
 const submitAxe = async (req, res) => {
   try {
     console.log('Submit Axe', req.body)
-    DB.addAxe(req.body.axe)
-    setTimeout(() => res.sendStatus(200), 500)
+    const result = await DB.addAxe(req.body.axe)
+    res.sendStatus(result)
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)

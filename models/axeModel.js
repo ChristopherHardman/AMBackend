@@ -33,7 +33,7 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: false,
     },
     strike: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.DECIMAL,
       allowNull: false,
     },
     callPut: {
@@ -41,15 +41,15 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: false,
     },
     volPrice: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.DECIMAL,
       allowNull: false,
     },
     spot: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.DECIMAL,
       allowNull: false,
     },
     premium: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.DECIMAL,
       allowNull: false,
     },
     premiumCurrency: {
@@ -61,7 +61,7 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: false,
     },
     delta: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.DECIMAL,
       allowNull: false,
     },
     KOStrike: {
@@ -73,6 +73,14 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: false,
     },
     userID: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+    capacity: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
+    tradeStatus: {
       type: Sequelize.STRING,
       allowNull: false,
     },

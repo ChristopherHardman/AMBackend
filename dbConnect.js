@@ -2,9 +2,9 @@ const { Sequelize, Op } = require('sequelize')
 const bcrypt = require('bcrypt')
 
 const saltRounds = 10
-const Environment = 'development'
+const Environment = 'test'
 const sequelize = new Sequelize(
-  Environment === 'test'
+  Environment === 'development'
     ? 'postgres://localhost:5432/am'
     : 'postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4'
 )
@@ -24,7 +24,7 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
+Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
@@ -49,7 +49,15 @@ const generateFilter = (query, type, companyID) => {
     '<15y': 15 * 365,
   }
   const filter = {
-    where: {},
+    where: { status: 'active' },
+  }
+  if (query.deleted) {
+    const now = new Date()
+    return {
+      where: {
+        [Op.or]: [{ status: 'delete' }, { date: { $lt: now } }],
+      },
+    }
   }
   // filter.where.status = 'active'
   if (query.callPut) filter.where.callPut = query.callPut
@@ -101,13 +109,12 @@ const getAxes = async (request) => {
     const newArray = array
       .filter((a) => !a.excludeList.includes(company))
       .map(({ traderName, company, excludeList, userID, ...axe }) => axe)
-      return newArray
+    return newArray
   }
   if (type === 'Bank') return array
 }
 
 const getAxe = async (axeID) => {
-  // const axe = await Axe.findAll({ where: { id: axeID } })
   const axe = await Axe.findByPk(axeID)
   axe.views = axe.views ? axe.views + 1 : 1
   await axe.save()
@@ -137,9 +144,15 @@ const categoriseAxe = (axe) => {
 const addAxe = async (axe) => {
   axe.category = categoriseAxe(axe)
   axe.status = 'active'
+  axe.capacity = axe.notional
+  axe.tradeStatus = 'available'
   const newAxe = new Axe(axe)
-  await newAxe.save()
-  recordActivity('New Axe Created', axe.userID)
+  const result = await newAxe.save()
+  if (result.dataValues) {
+    recordActivity('New Axe Created', axe.userID)
+    return 200
+  }
+  return 401
 }
 
 const updateAxe = async (axe) => {
@@ -194,7 +207,6 @@ const updateAxe = async (axe) => {
 }
 
 const createAccount = async (user) => {
-  console.log('UUUUU', user);
   const uniqueEmail = await User.findAll({ where: { email: user.email } })
   // const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
   // if (uniqueEmail && uniqueEmail.verified ) return 'Already registered';
@@ -243,7 +255,20 @@ const addCustomList = async ({ userID, company, listName, list }) => {
   await AAA.save()
   const BBB = await Company.findByPk(company)
   const newCustomLists = await getCustomLists(BBB.customLists)
-  return {customLists: newCustomLists}
+  return { customLists: newCustomLists }
+}
+
+const deleteCustomList = async ({ company, listID }) => {
+  console.log('****', company, listID)
+  const AAA = await Company.findByPk(company)
+  console.log('AAA', AAA)
+  AAA.customLists = AAA.customLists.filter((l) => l !== listID)
+  await AAA.save()
+  const list = await CustomList.findByPk(listID)
+  await list.destroy()
+  const BBB = await Company.findByPk(company)
+  const newCustomLists = await getCustomLists(BBB.customLists)
+  return { customLists: newCustomLists }
 }
 
 const getUser = async (userID) => {
@@ -282,10 +307,36 @@ const getCustomLists = async (listIDs) => {
   return lists
 }
 
+// Trade
+const checkCapacity = async (axeID, amount) => {
+  const axe = await Axe.findByPk(axeID)
+  const check = axe.capacity >= amount
+  return { capacity: check, remaining: axe.capacity}
+}
+
+const updateCapacity = async (axeID, amount) => {
+  const axe = await Axe.findByPk(axeID)
+  axe.capacity += amount
+  await axe.save()
+}
+
+const checkTradeStatus = async (axeID) => {
+  const axe = await Axe.findByPk(axeID)
+  console.log('TRADE STATUS', axe);
+  return axe.tradeStatus === 'available'
+}
+
+const updateTradeStatus = async (axeID, status) => {
+  const axe = await Axe.findByPk(axeID)
+  axe.tradeStatus = status
+  await axe.save()
+}
+
 module.exports = {
   addAxe,
   addCompany,
   addCustomList,
+  deleteCustomList,
   getAxe,
   getAxes,
   getCompany,
@@ -295,4 +346,9 @@ module.exports = {
   getActivity,
   getCompanies,
   updateAxe,
+  // Trade
+  checkCapacity,
+  updateCapacity,
+  checkTradeStatus,
+  updateTradeStatus
 }
