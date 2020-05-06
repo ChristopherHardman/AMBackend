@@ -24,6 +24,14 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    notifications: {
+      type: Sequelize.ARRAY(Sequelize.STRING),
+      allowNull: true,
+    },
+    productPreferences: {
+      type: Sequelize.ARRAY(Sequelize.STRING),
+      allowNull: true,
+    },
     id: {
       allowNull: false,
       primaryKey: true,

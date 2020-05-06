@@ -14,8 +14,8 @@ const search = async (req, res) => {
 const viewAxe = async (req, res) => {
   try {
     console.log('search', req.body)
-    const { axeID } = req.body
-    const result = await DB.getAxe(axeID)
+    const { userID, axeID } = req.body
+    const result = await DB.getAxe(userID, axeID)
     res.send(result)
   } catch (error) {
     console.log('ERROR', error)

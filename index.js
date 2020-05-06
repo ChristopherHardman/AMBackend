@@ -65,6 +65,7 @@ app.get('/getCompanies', AdminController.getCompanies)
 app.post('/signin', UserController.signIn)
 app.post('/customList', UserController.customList)
 app.post('/deleteCustomList', UserController.deleteCustomList)
+app.post('/savePreferences', UserController.savePreferences)
 
 // Search
 app.post('/search', SearchController.search)

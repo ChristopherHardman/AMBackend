@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt')
 const saltRounds = 10
 const Environment = 'test'
 const sequelize = new Sequelize(
-  Environment === 'development'
+  Environment === 'test'
     ? 'postgres://localhost:5432/am'
     : 'postgres://lyltfjkuixdqpr:d5d7faecd399034e4b97eb5bdc42aba1187fcf37a41940212941a56c2f9b24e2@ec2-46-137-84-173.eu-west-1.compute.amazonaws.com:5432/dekiitsc4t78r4'
 )
@@ -104,21 +104,48 @@ const getAxes = async (request) => {
   const filterApplied = generateFilter(query, type, id)
   const results = await Axe.findAll(filterApplied)
   const array = results.map((a) => a.dataValues)
+  const user = await getUser(userID)
   // Remove sensitive information and any axes that a company has been excluded from
-  if (type !== 'Bank') {
+  if (user.type === 'Client') {
     const newArray = array
       .filter((a) => !a.excludeList.includes(company))
-      .map(({ traderName, company, excludeList, userID, ...axe }) => axe)
+      .map(
+        ({ traderName, company, excludeList, userID, notional, views, createdAt, updatedAt, ...axe }) =>
+          axe
+      )
     return newArray
   }
-  if (type === 'Bank') return array
+  if (user.type === 'Bank-Sales') {
+    const newArray = array.map(({ notional, views, ...axe }) => axe)
+    return newArray
+  }
+  if (user.type === 'Bank-Trader') return array
 }
 
-const getAxe = async (axeID) => {
-  const axe = await Axe.findByPk(axeID)
-  axe.views = axe.views ? axe.views + 1 : 1
-  await axe.save()
-  return axe
+const getAxe = async (userID, axeID) => {
+  const user = await getUser(userID)
+  const axe = await Axe.findByPk( axeID )
+  // .then(data => data.get({ plain: true }));
+  const dataToSend = await Axe.findByPk( axeID ).then(data => data.get({ plain: true }));
+  // Remove sensitive information and any axes that a company has been excluded from
+  if (user.type === 'Client') {
+    // Assuming we are only counting client views
+    axe.views = axe.views ? axe.views + 1 : 1
+    await axe.save()
+    delete dataToSend.traderName
+    delete dataToSend.company
+    dataToSend.excludeList = []
+    delete dataToSend.userID
+    delete dataToSend.notional
+    delete dataToSend.views
+    return dataToSend
+  }
+  if (user.type === 'Bank-Sales') {
+    delete dataToSend.notional
+    delete dataToSend.views
+    return dataToSend
+  }
+  if (user.type === 'Bank-Trader') return axe
 }
 
 const categoriseAxe = (axe) => {
@@ -239,6 +266,10 @@ const login = async ({ email, password }) => {
       email: details.email,
       company: details.company,
       customLists,
+      notifications: details.notifications ? details.notifications : [],
+      productPreferences: details.productPreferences
+        ? details.productPreferences
+        : [],
       type: details.type,
     }
     return dataToSend
@@ -269,6 +300,17 @@ const deleteCustomList = async ({ company, listID }) => {
   const BBB = await Company.findByPk(company)
   const newCustomLists = await getCustomLists(BBB.customLists)
   return { customLists: newCustomLists }
+}
+
+const savePreferences = async ({ id, label, preferences }) => {
+  console.log('****', id, label, preferences)
+  const AAA = await User.findByPk(id)
+  console.log('AAA', AAA);
+  AAA[label] = preferences
+  await AAA.save()
+  const BBB = await User.findByPk(id)
+  console.log('BBB', BBB);
+  return { [label]: BBB[label] }
 }
 
 const getUser = async (userID) => {
@@ -346,6 +388,8 @@ module.exports = {
   getActivity,
   getCompanies,
   updateAxe,
+  // User
+  savePreferences,
   // Trade
   checkCapacity,
   updateCapacity,

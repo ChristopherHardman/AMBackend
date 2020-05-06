@@ -51,6 +51,16 @@ const deleteCustomList = async (req, res) => {
   }
 }
 
+const savePreferences = async (req, res) => {
+  try {
+    console.log('Save Preferences', req.body)
+    const newPreferences = await DB.savePreferences(req.body)
+    res.send(newPreferences)
+  } catch (error) {
+    res.sendStatus(500)
+  }
+}
+
 const createAlert = async (req, res) => {
   try {
     console.log('CREATE ALERT', req.body);
@@ -64,5 +74,6 @@ module.exports = {
   createAlert,
   customList,
   deleteCustomList,
+  savePreferences,
   signIn,
 }

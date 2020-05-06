@@ -34,15 +34,15 @@ module.exports = (sequelize, Sequelize) => {
     },
     strike: {
       type: Sequelize.DECIMAL,
-      allowNull: false,
+      allowNull: true,
     },
     callPut: {
       type: Sequelize.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     volPrice: {
       type: Sequelize.DECIMAL,
-      allowNull: false,
+      allowNull: true,
     },
     spot: {
       type: Sequelize.DECIMAL,
@@ -71,6 +71,30 @@ module.exports = (sequelize, Sequelize) => {
     minimumTrade: {
       type: Sequelize.INTEGER,
       allowNull: false,
+    },
+    digiStrike: {
+      type: Sequelize.DECIMAL,
+      allowNull: true,
+    },
+    barrier1Type: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    barrier1: {
+      type: Sequelize.DECIMAL,
+      allowNull: true,
+    },
+    barrier1DateStart: {
+      type: Sequelize.DATE,
+      allowNull: true,
+    },
+    barrier1DateEnd: {
+      type: Sequelize.DATE,
+      allowNull: true,
+    },
+    fixingPage: {
+      type: Sequelize.STRING,
+      allowNull: true,
     },
     userID: {
       type: Sequelize.STRING,
