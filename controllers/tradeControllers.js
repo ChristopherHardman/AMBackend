@@ -63,6 +63,18 @@ const confirmPickup = async (req, res) => {
   }
 }
 
+// Lets the client know that the bank has picked-up Alert
+const fullDetails = async (data) => {
+  try {
+    console.log('FFF DDD')
+
+
+    req.app.io.emit('fullDetails', data)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
 // Receive edit to axe from bank. Update the axe record and send to the client to confirm.
 const editTrade = async (req, res) => {
   try {
@@ -80,7 +92,7 @@ const finaliseTrade = async (req, res) => {
   try {
     console.log('Finalise trade', req.body)
 
-    Email.confirmTrade('info@axedmarkets.com')
+    Email.confirmTrade('chrisdelatopher@gmail.com')
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)
@@ -93,4 +105,5 @@ module.exports = {
   confirmPickup,
   editTrade,
   finaliseTrade,
+  fullDetails
 }

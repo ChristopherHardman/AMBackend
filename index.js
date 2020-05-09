@@ -3,6 +3,7 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const server = require('http').createServer(app)
 const io = require('socket.io')(server)
+const DB = require('./dbConnect')
 const AdminController = require('./controllers/adminControllers')
 const AxeController = require('./controllers/axeControllers')
 const SearchController = require('./controllers/searchControllers')
@@ -21,6 +22,12 @@ io.on('connection', (socket) => {
   socket.on('pickup', (data) => {
     io.emit('Pickup', 'Pickup')
   })
+  socket.on('fullDetails', (data) => {
+    console.log('FULL Details')
+    // TradeController.fullDetails(data)
+    // io.emit('fullDetails', data)
+    fullDetails(data)
+  })
   socket.on('submitChanges', (data) => {
     console.log('Submit Changes', data)
     io.emit('submitChanges', data)
@@ -28,10 +35,11 @@ io.on('connection', (socket) => {
   socket.on('tradeConfirmed', () => {
     io.emit('TradeConfirmed', 'TradeConfirmed')
   })
-  socket.on('TradeConfirmedClient', () => {
-    console.log('TCC')
-    io.emit('TradeConfirmedClient')
-    // Email.confirmTrade('confirmations@axedmarkets.com')
+  socket.on('TradeConfirmedClient', (data) => {
+    tradeConfirmedClient(data)
+    // console.log('TCC')
+    // io.emit('TradeConfirmedClient')
+    // Email.confirmTrade('confirmations@axedmarkets.com', details)
   })
   socket.on('Cancel', () => {
     console.log('Cancel')
@@ -43,10 +51,31 @@ io.on('connection', (socket) => {
   })
 })
 
+
+const fullDetails = async (data) => {
+  console.log('****', data);
+  const {firstName, lastName, company} = await DB.getUser(data.userID)
+  data.traderName = `${firstName} ${lastName}`
+  const {name} =  await DB.getCompany(company)
+  data.companyName = name
+  io.emit('fullDetails', data)
+}
+
+
+const tradeConfirmedClient = async (data) => {
+  console.log('%%%%%%%%%', data);
+  const { name } = await DB.getCompany(data.company)
+  io.emit('TradeConfirmedClient')
+  const details = `${name} buys ${data.amount}...`
+  DB.updateCapacity(data.axeID, data.amount)
+  Email.confirmTrade('confirmations@axedmarkets.com', details)
+}
+
 //
 const socketMiddleware = async (req, res, next) => {
   console.log('rrrr', req.body);
-  const a = users.filter((u) => u.userID === req.body.data1.axeCreatorID)
+  const companyID = await DB.getCompanyIDfromAxe(req.body.data1.axeID)
+  const a = users.filter((u) => u.userID === companyID)
   req.body.socketID = a[0] ? a[0].id : null
   await next()
 }

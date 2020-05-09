@@ -14,7 +14,7 @@ const readHTMLFile = function (path, callback) {
 }
 
 
-const confirmTrade = (email) => {
+const confirmTrade = (email, details) => {
   nodemailer.createTestAccount((err, account) => {
     const transporter = nodemailer.createTransport({
       pool: true,
@@ -30,6 +30,7 @@ const confirmTrade = (email) => {
 
       const replacements = {
         introduction: 'We are delighted to confirm your recent trade agreed on Axed Markets.',
+        details
       }
       const htmlToSend = template(replacements)
 

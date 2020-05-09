@@ -2,7 +2,7 @@ const { Sequelize, Op } = require('sequelize')
 const bcrypt = require('bcrypt')
 
 const saltRounds = 10
-const Environment = 'test'
+const Environment = 'development'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -24,7 +24,7 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
+Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
@@ -290,9 +290,7 @@ const addCustomList = async ({ userID, company, listName, list }) => {
 }
 
 const deleteCustomList = async ({ company, listID }) => {
-  console.log('****', company, listID)
   const AAA = await Company.findByPk(company)
-  console.log('AAA', AAA)
   AAA.customLists = AAA.customLists.filter((l) => l !== listID)
   await AAA.save()
   const list = await CustomList.findByPk(listID)
@@ -303,13 +301,10 @@ const deleteCustomList = async ({ company, listID }) => {
 }
 
 const savePreferences = async ({ id, label, preferences }) => {
-  console.log('****', id, label, preferences)
   const AAA = await User.findByPk(id)
-  console.log('AAA', AAA);
   AAA[label] = preferences
   await AAA.save()
   const BBB = await User.findByPk(id)
-  console.log('BBB', BBB);
   return { [label]: BBB[label] }
 }
 
@@ -358,13 +353,12 @@ const checkCapacity = async (axeID, amount) => {
 
 const updateCapacity = async (axeID, amount) => {
   const axe = await Axe.findByPk(axeID)
-  axe.capacity += amount
+  axe.capacity -= amount
   await axe.save()
 }
 
 const checkTradeStatus = async (axeID) => {
   const axe = await Axe.findByPk(axeID)
-  console.log('TRADE STATUS', axe);
   return axe.tradeStatus === 'available'
 }
 
@@ -372,6 +366,11 @@ const updateTradeStatus = async (axeID, status) => {
   const axe = await Axe.findByPk(axeID)
   axe.tradeStatus = status
   await axe.save()
+}
+
+const getCompanyIDfromAxe = async (axeID) => {
+  const axe = await Axe.findByPk(axeID)
+  return axe.company
 }
 
 module.exports = {
@@ -394,5 +393,6 @@ module.exports = {
   checkCapacity,
   updateCapacity,
   checkTradeStatus,
+  getCompanyIDfromAxe,
   updateTradeStatus
 }
