@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt')
 const Email = require('./nodemailer')
 
 const saltRounds = 10
-const Environment = 'test'
+const Environment = 'development'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -26,7 +26,7 @@ const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
+Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
