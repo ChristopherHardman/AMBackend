@@ -26,16 +26,26 @@ const trade = async (req, res) => {
     }
     const { firstName, lastName, company } = await DB.getUser(userID)
     const { name } = await DB.getCompany(company)
-    req.body.socketID &&
-      req.app.io.to(req.body.socketID).emit('TradeRequest', {
-        firstName,
-        lastName,
-        company: name,
-        axeID,
-        amount,
-        delta
-      })
+
+    const newTransaction = {
+      clientTrader: userID,
+      axeID,
+      initialAmount: amount,
+      initialDelta: delta,
+      initialRequestTime: new Date()
+    }
+    const transactionID = await DB.createTransaction(newTransaction)
     // await DB.updateTradeStatus(axeID, 'engaged')
+    req.body.socketID &&
+    req.app.io.to(req.body.socketID).emit('TradeRequest', {
+      firstName,
+      lastName,
+      company: name,
+      axeID,
+      amount,
+      delta,
+      transactionID
+    })
     res.send({ status: 'requesting' })
   } catch (error) {
     console.log('ERROR', error)

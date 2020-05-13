@@ -24,13 +24,19 @@ io.on('connection', (socket) => {
   })
   socket.on('fullDetails', (data) => {
     console.log('FULL Details')
-    // TradeController.fullDetails(data)
-    // io.emit('fullDetails', data)
     fullDetails(data)
   })
   socket.on('submitChanges', (data) => {
     console.log('Submit Changes', data)
+    DB.updateTransaction(data.transactionID, {
+      pricingVolChange: data.pricingVol,
+      pricingVolChangeDate: new Date()
+    })
     io.emit('submitChanges', data)
+  })
+  socket.on('confirmPriceChange', () => {
+    console.log('CONFIRM PRICE CHANGE');
+    io.emit('ConfirmPriceChange', 'ConfirmPriceChange')
   })
   socket.on('tradeConfirmed', () => {
     io.emit('TradeConfirmed', 'TradeConfirmed')
@@ -59,6 +65,15 @@ const fullDetails = async (data) => {
   const {name} =  await DB.getCompany(company)
   data.companyName = name
   io.emit('fullDetails', data)
+  const transactionUpdate = {
+    confirmTime: new Date(),
+    bankTrader: data.userID,
+    confirmedAmount: data.amount,
+    forwardDate: data.forwardDate,
+    confirmedPrice: data.price,
+    optionPremium: data.optionPremium
+  }
+  DB.updateTransaction(data.transactionID, transactionUpdate)
 }
 
 
@@ -69,6 +84,10 @@ const tradeConfirmedClient = async (data) => {
   const details = `${name} buys ${data.amount}...`
   DB.updateCapacity(data.axeID, data.amount)
   Email.confirmTrade('confirmations@axedmarkets.com', details)
+  const transactionUpdate = {
+    completeTime: new Date(),
+  }
+  DB.updateTransaction(data.transactionID, transactionUpdate)
 }
 
 //
@@ -89,6 +108,7 @@ app.post('/createAccount', UserController.createAccount)
 app.get('/getActivity', AdminController.getActivity)
 app.post('/addCompany', AdminController.addCompany)
 app.get('/getCompanies', AdminController.getCompanies)
+app.get('/getTradingLog', AdminController.getTradingLog)
 
 // User
 app.post('/signin', UserController.signIn)

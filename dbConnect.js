@@ -1,8 +1,9 @@
 const { Sequelize, Op } = require('sequelize')
 const bcrypt = require('bcrypt')
+const Email = require('./nodemailer')
 
 const saltRounds = 10
-const Environment = 'development'
+const Environment = 'test'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -22,12 +23,14 @@ const User = sequelize.import(`${__dirname}/models/userModel`)
 const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
 const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
+const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 // Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
+Transaction.sync({ force: true })
 
 // To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
@@ -36,6 +39,7 @@ const recordActivity = async (type, user) => {
 }
 
 const generateFilter = (query, type, companyID) => {
+  console.log('******', query, type, companyID);
   const DateOptions = {
     'O/N': 1,
     '<1w': 7,
@@ -49,23 +53,27 @@ const generateFilter = (query, type, companyID) => {
     '<15y': 15 * 365,
   }
   const filter = {
-    where: { status: 'active' },
+    where: { },
   }
   if (query.deleted) {
     const now = new Date()
     return {
       where: {
-        [Op.or]: [{ status: 'delete' }, { date: { $lt: now } }],
+        [Op.or]: [{ status: 'delete' }, { expiryDate: { [Op.lt]: now } }],
       },
     }
   }
-  // filter.where.status = 'active'
+  if (type === 'Bank') filter.where.status = { [Op.or]: ['active', 'pause'] }
+  if (type !== 'Bank') filter.where.status = 'active'
   if (query.callPut) filter.where.callPut = query.callPut
   if (query.product) filter.where.product = query.product
   if (query.buySell) filter.where.direction = query.buySell
   if (type === 'Bank') filter.where.company = companyID
   // if (type !== 'Bank') filter.where.excludeList = { [Op.notIn]: [companyID] }
   if (query.currencyPair) filter.where.currencyPair = query.currencyPair
+  if (query.observation === 'American') filter.where.product = 'One Touch (American)'
+  if (query.observation === 'European')
+  filter.where.product = { [Op.or]: ['Vanilla', 'European Digi', 'RKO'] }
   if (query.date) {
     // How should we apply month calculation?
     const endDate = new Date()
@@ -102,6 +110,7 @@ const getAxes = async (request) => {
   const { query, userID, company } = request
   const { type, id } = await getCompany(company)
   const filterApplied = generateFilter(query, type, id)
+  console.log('FA', filterApplied);
   const results = await Axe.findAll(filterApplied)
   const array = results.map((a) => a.dataValues)
   const user = await getUser(userID)
@@ -177,6 +186,7 @@ const addAxe = async (axe) => {
   const result = await newAxe.save()
   if (result.dataValues) {
     recordActivity('New Axe Created', axe.userID)
+    Email.appAlerts('New Axe Created', axe.userID)
     return 200
   }
   return 401
@@ -272,6 +282,7 @@ const login = async ({ email, password }) => {
         : [],
       type: details.type,
     }
+    Email.appAlerts('Login', `${details.firstName} ${details.lastName} `)
     return dataToSend
   }
 }
@@ -373,6 +384,49 @@ const getCompanyIDfromAxe = async (axeID) => {
   return axe.company
 }
 
+
+// Transaction tracking
+
+const createTransaction = async (transaction) => {
+  const newTransaction = new Transaction(transaction)
+  const result = await newTransaction.save()
+  return result.id
+  // if (result.dataValues) {
+  //   recordActivity('New Axe Created', axe.userID)
+  //   Email.appAlerts('New Axe Created', axe.userID)
+  //   return 200
+  // }
+  // return 401
+}
+
+const updateTransaction = async (transactionID, updates) => {
+  // const {
+  //   traderName,
+  //   currencyPair,
+  //   excludeList,
+  // } = axe
+
+  const update = await Transaction.update(
+    // {
+    //   traderName,
+    //   currencyPair,
+    //   excludeList,
+    // },
+    updates,
+    { where: { id: transactionID } }
+  )
+  console.log('UPDATE', update);
+  if (update[0] === 1) return 'success'
+  return null
+}
+
+
+const getTransactions = async (request) => {
+  const results = await Transaction.findAll()
+  const array = results.map((a) => a.dataValues)
+  return array
+}
+
 module.exports = {
   addAxe,
   addCompany,
@@ -394,5 +448,9 @@ module.exports = {
   updateCapacity,
   checkTradeStatus,
   getCompanyIDfromAxe,
-  updateTradeStatus
+  updateTradeStatus,
+  // Transaction trackiing
+  createTransaction,
+  updateTransaction,
+  getTransactions,
 }

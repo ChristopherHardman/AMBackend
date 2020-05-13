@@ -35,9 +35,22 @@ const getCompanies = async (req, res) => {
   }
 }
 
+const getTradingLog = async (req, res) => {
+  try {
+    console.log('Get Trading Log')
+    const transactions = await DB.getTransactions()
+    res.send(transactions)
+  } catch (error) {
+    console.log('ERROR', error)
+    res.sendStatus(500)
+  }
+}
+
+
 
 module.exports = {
   getActivity,
   addCompany,
-  getCompanies
+  getCompanies,
+  getTradingLog
 }
