@@ -59,7 +59,6 @@ io.on('connection', (socket) => {
 
 
 const fullDetails = async (data) => {
-  console.log('****', data);
   const {firstName, lastName, company} = await DB.getUser(data.userID)
   data.traderName = `${firstName} ${lastName}`
   const {name} =  await DB.getCompany(company)

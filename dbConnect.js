@@ -32,7 +32,6 @@ const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 // CustomList.sync({ force: true })
 // Transaction.sync({ force: true })
 
-// To add: deltaAmount, deltaCurrency, salesCredit
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
   await newEvent.save()
@@ -71,9 +70,9 @@ const generateFilter = (query, type, companyID) => {
   if (type === 'Bank') filter.where.company = companyID
   // if (type !== 'Bank') filter.where.excludeList = { [Op.notIn]: [companyID] }
   if (query.currencyPair) filter.where.currencyPair = query.currencyPair
-  if (query.observation === 'American') filter.where.product = 'One Touch (American)'
-  if (query.observation === 'European')
-  filter.where.product = { [Op.or]: ['Vanilla', 'European Digi', 'RKO'] }
+  // if (query.observation === 'American') filter.where.product = 'One Touch (American)'
+  // if (query.observation === 'European')
+  //   filter.where.product = { [Op.or]: ['Vanilla', 'European Digi', 'RKO'] }
   if (query.date) {
     // How should we apply month calculation?
     const endDate = new Date()
@@ -94,7 +93,12 @@ const generateFilter = (query, type, companyID) => {
       end.setHours(23, 59, 59, 999)
       filter.where.date = { [Op.between]: [start, end] }
     }
-    if (query.filter !== 'O/N') filter.where.category = query.filter
+    if (query.filter === '1st Gen Exotics') {
+      filter.where.product = {
+        [Op.or]: ['One Touch (American)', 'European Digi', 'RKO'],
+      }
+    }
+    if (query.filter !== 'O/N' && query.filter !== '1st Gen Exotics') filter.where.category = query.filter
   }
   return filter
   // Filters	Description	Examples
@@ -133,9 +137,10 @@ const getAxes = async (request) => {
 
 const getAxe = async (userID, axeID) => {
   const user = await getUser(userID)
-  const axe = await Axe.findByPk( axeID )
-  // .then(data => data.get({ plain: true }));
-  const dataToSend = await Axe.findByPk( axeID ).then(data => data.get({ plain: true }));
+  const axe = await Axe.findByPk(axeID)
+  const dataToSend = await Axe.findByPk(axeID).then((data) =>
+    data.get({ plain: true })
+  )
   // Remove sensitive information and any axes that a company has been excluded from
   if (user.type === 'Client') {
     // Assuming we are only counting client views
@@ -193,52 +198,7 @@ const addAxe = async (axe) => {
 }
 
 const updateAxe = async (axe) => {
-  const {
-    traderName,
-    currencyPair,
-    excludeList,
-    product,
-    direction,
-    notional,
-    date,
-    strike,
-    callPut,
-    volPrice,
-    spot,
-    premium,
-    premiumCurrency,
-    KOStrike,
-    minimumTrade,
-    category,
-    status,
-    cut,
-    delta,
-  } = axe
-
-  const update = await Axe.update(
-    {
-      traderName,
-      currencyPair,
-      excludeList,
-      product,
-      direction,
-      notional,
-      date,
-      strike,
-      callPut,
-      volPrice,
-      spot,
-      premium,
-      premiumCurrency,
-      KOStrike,
-      minimumTrade,
-      category,
-      status,
-      cut,
-      delta,
-    },
-    { where: { id: axe.id } }
-  )
+  const update = await Axe.update(axe, { where: { id: axe.id } })
   if (update[0] === 1) return 'success'
   return null
 }
@@ -391,31 +351,13 @@ const createTransaction = async (transaction) => {
   const newTransaction = new Transaction(transaction)
   const result = await newTransaction.save()
   return result.id
-  // if (result.dataValues) {
-  //   recordActivity('New Axe Created', axe.userID)
-  //   Email.appAlerts('New Axe Created', axe.userID)
-  //   return 200
-  // }
-  // return 401
 }
 
 const updateTransaction = async (transactionID, updates) => {
-  // const {
-  //   traderName,
-  //   currencyPair,
-  //   excludeList,
-  // } = axe
-
   const update = await Transaction.update(
-    // {
-    //   traderName,
-    //   currencyPair,
-    //   excludeList,
-    // },
     updates,
     { where: { id: transactionID } }
   )
-  console.log('UPDATE', update);
   if (update[0] === 1) return 'success'
   return null
 }
@@ -428,20 +370,21 @@ const getTransactions = async (request) => {
 }
 
 module.exports = {
-  addAxe,
+  // Admin
   addCompany,
+  createAccount,
+  getActivity,
+  // User
+  addAxe,
   addCustomList,
   deleteCustomList,
   getAxe,
   getAxes,
   getCompany,
-  createAccount,
   login,
   getUser,
-  getActivity,
   getCompanies,
   updateAxe,
-  // User
   savePreferences,
   // Trade
   checkCapacity,
