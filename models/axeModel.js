@@ -18,7 +18,6 @@ module.exports = (sequelize, Sequelize) => {
     },
     excludeList: {
       type: Sequelize.ARRAY(Sequelize.STRING),
-      // allowNull: false
     },
     direction: {
       type: Sequelize.STRING,
@@ -26,7 +25,6 @@ module.exports = (sequelize, Sequelize) => {
     },
     notional: {
       type: Sequelize.INTEGER,
-      allowNull: false,
     },
     expiryDate: {
       type: Sequelize.DATE,
@@ -42,43 +40,33 @@ module.exports = (sequelize, Sequelize) => {
     },
     strike: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     digiStrike: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     barrierStrike: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     callPut: {
       type: Sequelize.STRING,
-      allowNull: true,
     },
     payout: {
       type: Sequelize.STRING,
-      allowNull: true,
     },
     pricingVol: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     KOBarrier: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     spotRef: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     NDFRef: {
       type: Sequelize.DECIMAL,
-      allowNull: true,
     },
     premium: {
       type: Sequelize.DECIMAL,
-      allowNull: false,
     },
     premiumCurrency: {
       type: Sequelize.STRING,
@@ -86,35 +74,52 @@ module.exports = (sequelize, Sequelize) => {
     },
     forwardDelta: {
       type: Sequelize.DECIMAL,
-      allowNull: false,
     },
-    // KOStrike: {
-    //   type: Sequelize.INTEGER,
-    //   allowNull: true,
-    // },
     minimumTrade: {
       type: Sequelize.INTEGER,
       allowNull: false,
     },
-    // barrier1Type: {
-    //   type: Sequelize.STRING,
-    //   allowNull: true,
-    // },
-    // barrier1: {
-    //   type: Sequelize.DECIMAL,
-    //   allowNull: true,
-    // },
-    // barrier1DateStart: {
-    //   type: Sequelize.DATE,
-    //   allowNull: true,
-    // },
-    // barrier1DateEnd: {
-    //   type: Sequelize.DATE,
-    //   allowNull: true,
-    // },
     fixingPage: {
       type: Sequelize.STRING,
-      allowNull: true,
+    },
+    ratio: {
+      type: Sequelize.STRING,
+    },
+    pricingVol1: {
+      type: Sequelize.DECIMAL,
+    },
+    pricingVol2: {
+      type: Sequelize.DECIMAL,
+    },
+    putPricingVol: {
+      type: Sequelize.DECIMAL,
+    },
+    callPricingVol: {
+      type: Sequelize.DECIMAL,
+    },
+    strike1: {
+      type: Sequelize.DECIMAL,
+    },
+    strike2: {
+      type: Sequelize.DECIMAL,
+    },
+    putStrike: {
+      type: Sequelize.DECIMAL,
+    },
+    callStrike: {
+      type: Sequelize.DECIMAL,
+    },
+    netPremium: {
+      type: Sequelize.DECIMAL,
+    },
+    netForwardDelta: {
+      type: Sequelize.DECIMAL,
+    },
+    notional1: {
+      type: Sequelize.INTEGER,
+    },
+    notional2: {
+      type: Sequelize.INTEGER,
     },
     userID: {
       type: Sequelize.STRING,

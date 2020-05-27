@@ -24,6 +24,10 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    location: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
     notifications: {
       type: Sequelize.ARRAY(Sequelize.STRING),
       allowNull: true,

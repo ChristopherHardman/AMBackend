@@ -51,11 +51,11 @@ const generateFilter = (query, type, companyID) => {
     '<5y': 5 * 365,
     '<15y': 15 * 365,
   }
+  const now = new Date()
   const filter = {
-    where: { },
+    where: { expiryDate: { [Op.gt]: now } },
   }
   if (query.deleted) {
-    const now = new Date()
     return {
       where: {
         [Op.or]: [{ status: 'delete' }, { expiryDate: { [Op.lt]: now } }],
@@ -70,9 +70,6 @@ const generateFilter = (query, type, companyID) => {
   if (type === 'Bank') filter.where.company = companyID
   // if (type !== 'Bank') filter.where.excludeList = { [Op.notIn]: [companyID] }
   if (query.currencyPair) filter.where.currencyPair = query.currencyPair
-  // if (query.observation === 'American') filter.where.product = 'One Touch (American)'
-  // if (query.observation === 'European')
-  //   filter.where.product = { [Op.or]: ['Vanilla', 'European Digi', 'RKO'] }
   if (query.date) {
     // How should we apply month calculation?
     const endDate = new Date()
@@ -81,7 +78,7 @@ const generateFilter = (query, type, companyID) => {
     const end = endDate
     start.setHours(0, 0, 0, 0)
     end.setHours(23, 59, 59, 999)
-    filter.where.date = { [Op.between]: [start, end] }
+    filter.where.expiryDate = { [Op.between]: [start, end] }
   }
   if (query.filter) {
     if (query.filter === 'O/N') {
@@ -123,8 +120,17 @@ const getAxes = async (request) => {
     const newArray = array
       .filter((a) => !a.excludeList.includes(company))
       .map(
-        ({ traderName, company, excludeList, userID, notional, views, createdAt, updatedAt, ...axe }) =>
-          axe
+        ({
+          traderName,
+          company,
+          excludeList,
+          userID,
+          // notional,
+          views,
+          createdAt,
+          updatedAt,
+          ...axe
+        }) => axe
       )
     return newArray
   }
@@ -185,7 +191,7 @@ const categoriseAxe = (axe) => {
 const addAxe = async (axe) => {
   axe.category = categoriseAxe(axe)
   axe.status = 'active'
-  axe.capacity = axe.notional
+  axe.capacity = axe.notional || axe.notional1
   axe.tradeStatus = 'available'
   const newAxe = new Axe(axe)
   const result = await newAxe.save()
@@ -205,16 +211,34 @@ const updateAxe = async (axe) => {
 
 const createAccount = async (user) => {
   const uniqueEmail = await User.findAll({ where: { email: user.email } })
-  // const uniqueEmail = await UserModel.findOne({email : email.toLowerCase()})
-  // if (uniqueEmail && uniqueEmail.verified ) return 'Already registered';
-  user.firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)
-  user.lastName = user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)
-  await bcrypt.hash(user.password, saltRounds, function (err, hash) {
-    user.password = hash
-    const newUser = new User(user)
-    newUser.save()
-  })
-  return 'Success'
+  if (uniqueEmail.length > 0) return 401
+  if (uniqueEmail.length === 0) {
+    user.firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)
+    user.lastName = user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)
+    const hashedPassword = await new Promise((resolve, reject) => {
+        bcrypt.hash(user.password, saltRounds, function(err, hash) {
+          if (err) reject(err)
+          resolve(hash)
+        });
+      })
+      user.password = hashedPassword
+      const newUser = new User(user)
+      await newUser.save()
+
+    // const rrr = await bcrypt.hash(user.password, saltRounds, function (err, hash) {
+    //   user.password = hash
+    //   const newUser = new User(user)
+    //   let a =  newUser.save()
+    //   console.log('1', a);
+    // }).then(r => {
+
+      const uuu = await User.findAll({ where: { email: user.email } })
+      const company = await Company.findByPk(uuu[0].company)
+      company.staff = company.staff ? [...company.staff, uuu[0].id] : [uuu[0].id]
+      await company.save()
+      const companyUpdated = await Company.findByPk(uuu[0].company)
+    return 200
+  }
 }
 
 const login = async ({ email, password }) => {
@@ -229,6 +253,9 @@ const login = async ({ email, password }) => {
     const customLists = company.customLists
       ? await getCustomLists(company.customLists)
       : []
+    console.log('CLIENTS', company.clients);
+
+    const clients = await generateClientList(company.clients)
     const dataToSend = {
       firstName: details.firstName,
       lastName: details.lastName,
@@ -241,10 +268,36 @@ const login = async ({ email, password }) => {
         ? details.productPreferences
         : [],
       type: details.type,
+      clients
     }
     Email.appAlerts('Login', `${details.firstName} ${details.lastName} `)
     return dataToSend
   }
+}
+
+
+const generateClientList = async (clients) => {
+  let res = []
+
+  for (const client of clients) {
+    let a = { staff: []}
+    const comp = await Company.findByPk(client)
+    a.name = comp.name
+    if (comp.staff) {
+      for (const staff of comp.staff) {
+        let person = {}
+        const user = await User.findByPk(staff)
+        person.firstName = user.firstName
+        person.lastName = user.lastName
+        person.location = user.location
+        a.staff.push(person)
+      }
+    }
+    res.push(a)
+  }
+
+  console.log('****', res);
+  return res
 }
 
 const addCustomList = async ({ userID, company, listName, list }) => {
@@ -346,7 +399,6 @@ const getCompanyIDfromAxe = async (axeID) => {
 
 
 // Transaction tracking
-
 const createTransaction = async (transaction) => {
   const newTransaction = new Transaction(transaction)
   const result = await newTransaction.save()

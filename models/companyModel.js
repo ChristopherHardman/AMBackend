@@ -12,6 +12,14 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.ARRAY(Sequelize.STRING),
       allowNull: true,
     },
+    staff: {
+      type: Sequelize.ARRAY(Sequelize.STRING),
+      allowNull: true,
+    },
+    clients: {
+      type: Sequelize.ARRAY(Sequelize.STRING),
+      allowNull: true,
+    },
     id: {
       allowNull: false,
       primaryKey: true,
