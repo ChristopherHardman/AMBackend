@@ -18,12 +18,12 @@ sequelize
     console.error('Unable to connect to the database:', err)
   })
 
-const Axe = sequelize.import(`${__dirname}/models/axeModel`)
-const User = sequelize.import(`${__dirname}/models/userModel`)
-const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
-const Company = sequelize.import(`${__dirname}/models/companyModel`)
-const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
-const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
+// const Axe = sequelize.import(`${__dirname}/models/axeModel`)
+// const User = sequelize.import(`${__dirname}/models/userModel`)
+// const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
+// const Company = sequelize.import(`${__dirname}/models/companyModel`)
+// const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
+// const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
 User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 Axe.sync({ force: true })
