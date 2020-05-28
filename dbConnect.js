@@ -18,19 +18,19 @@ sequelize
     console.error('Unable to connect to the database:', err)
   })
 
-// const Axe = sequelize.import(`${__dirname}/models/axeModel`)
-// const User = sequelize.import(`${__dirname}/models/userModel`)
-// const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
-// const Company = sequelize.import(`${__dirname}/models/companyModel`)
-// const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
-// const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
+const Axe = sequelize.import(`${__dirname}/models/axeModel`)
+const User = sequelize.import(`${__dirname}/models/userModel`)
+const Tracker = sequelize.import(`${__dirname}/models/trackerModel`)
+const Company = sequelize.import(`${__dirname}/models/companyModel`)
+const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
+const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
-User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-Axe.sync({ force: true })
-Tracker.sync({ force: true })
-Company.sync({ force: true })
-CustomList.sync({ force: true })
-Transaction.sync({ force: true })
+// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+// Axe.sync({ force: true })
+// Tracker.sync({ force: true })
+// Company.sync({ force: true })
+// CustomList.sync({ force: true })
+// Transaction.sync({ force: true })
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
