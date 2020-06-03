@@ -148,7 +148,7 @@ module.exports = (sequelize, Sequelize) => {
       allowNull: false,
     },
     views: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.ARRAY(Sequelize.STRING),
       // allowNull: false,
     },
   })

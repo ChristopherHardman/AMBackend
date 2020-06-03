@@ -25,12 +25,12 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
-// Tracker.sync({ force: true })
-// Company.sync({ force: true })
-// CustomList.sync({ force: true })
-// Transaction.sync({ force: true })
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+Axe.sync({ force: true })
+Tracker.sync({ force: true })
+Company.sync({ force: true })
+CustomList.sync({ force: true })
+Transaction.sync({ force: true })
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
@@ -150,7 +150,7 @@ const getAxe = async (userID, axeID) => {
   // Remove sensitive information and any axes that a company has been excluded from
   if (user.type === 'Client') {
     // Assuming we are only counting client views
-    axe.views = axe.views ? axe.views + 1 : 1
+    axe.views = axe.views ? [...axe.views, userID] : [userID]
     await axe.save()
     delete dataToSend.traderName
     delete dataToSend.company
@@ -165,7 +165,16 @@ const getAxe = async (userID, axeID) => {
     delete dataToSend.views
     return dataToSend
   }
-  if (user.type === 'Bank-Trader') return axe
+  if (user.type === 'Bank-Trader') {
+    console.log('*****BT****', axe);
+    let newViews = []
+    for (const view of axe.views) {
+      const res = await getUserAndCompany(view)
+      newViews.push(res)
+    }
+    axe.views = newViews
+    return axe
+  }
 }
 
 const categoriseAxe = (axe) => {
@@ -337,6 +346,12 @@ const getUser = async (userID) => {
   return user.map((a) => a.dataValues)[0]
 }
 
+const getUserAndCompany = async (userID) => {
+  const { firstName, lastName, company, type } = await User.findByPk(userID)
+  const {name} = await Company.findByPk(company)
+  return {company: name, type, firstName, lastName}
+}
+
 const getActivity = async () => {
   const results = await Tracker.findAll()
   return results.map((a) => a.dataValues)
@@ -347,8 +362,26 @@ const addCompany = async (company) => {
   await newCompany.save()
 }
 
+const updateCompany = async (company) => {
+  const update = await Company.update(company, { where: { id: company.id } })
+  if (update[0] === 1) return 'success'
+  return null
+}
+
+
+const updateUser = async (user) => {
+  const update = await User.update(user, { where: { id: user.id } })
+  if (update[0] === 1) return 200
+  return 500
+}
+
 const getCompanies = async () => {
   const results = await Company.findAll()
+  return results.map((a) => a.dataValues)
+}
+
+const getUsers = async () => {
+  const results = await User.findAll()
   return results.map((a) => a.dataValues)
 }
 
@@ -426,6 +459,9 @@ module.exports = {
   addCompany,
   createAccount,
   getActivity,
+  updateCompany,
+  getUsers,
+  updateUser,
   // User
   addAxe,
   addCustomList,

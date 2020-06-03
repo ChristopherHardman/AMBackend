@@ -108,6 +108,8 @@ app.get('/getActivity', AdminController.getActivity)
 app.post('/addCompany', AdminController.addCompany)
 app.get('/getCompanies', AdminController.getCompanies)
 app.get('/getTradingLog', AdminController.getTradingLog)
+app.post('/populate', AdminController.populate)
+app.get('/getUsers', AdminController.getUsers)
 
 // User
 app.post('/signin', UserController.signIn)

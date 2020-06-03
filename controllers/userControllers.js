@@ -2,8 +2,9 @@ const jwt = require('jsonwebtoken')
 const DB = require('../dbConnect')
 
 const createAccount = async (req, res) => {
+  console.log('UUUSSSEEERRRR', req.body);
   try {
-    const create = await DB.createAccount(req.body)
+    const create = req.body.label === 'add' ? await DB.createAccount(req.body.user) : await DB.updateUser(req.body.user)
     res.sendStatus(create)
   } catch (error) {
     console.log('CREAT ACCOUNT ERROR', error)
@@ -24,7 +25,6 @@ const signIn = async (req, res) => {
         'AM2020',
         { expiresIn: 60 * 60 }
       )
-      // user.clients = await DB.getCompanies()
       res.send(user)
     }
   } catch (error) {
