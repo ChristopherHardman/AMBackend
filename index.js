@@ -47,6 +47,10 @@ io.on('connection', (socket) => {
     // io.emit('TradeConfirmedClient')
     // Email.confirmTrade('confirmations@axedmarkets.com', details)
   })
+  socket.on('refQuote', () => {
+    console.log('refQuote')
+    io.emit('refQuote', 'refQuote')
+  })
   socket.on('Cancel', () => {
     console.log('Cancel')
     io.emit('Cancel', 'Cancel')

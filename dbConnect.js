@@ -25,12 +25,12 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
-// Tracker.sync({ force: true })
-// Company.sync({ force: true })
-// CustomList.sync({ force: true })
-// Transaction.sync({ force: true })
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+Axe.sync({ force: true })
+Tracker.sync({ force: true })
+Company.sync({ force: true })
+CustomList.sync({ force: true })
+Transaction.sync({ force: true })
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
@@ -38,7 +38,7 @@ const recordActivity = async (type, user) => {
 }
 
 const generateFilter = (query, type, companyID) => {
-  console.log('******', query, type, companyID);
+  console.log('******', query, type, companyID)
   const DateOptions = {
     'O/N': 1,
     '<1w': 7,
@@ -157,6 +157,8 @@ const getAxe = async (userID, axeID) => {
     dataToSend.excludeList = []
     delete dataToSend.userID
     delete dataToSend.notional
+    delete dataToSend.notional1
+    delete dataToSend.notional2
     delete dataToSend.views
     return dataToSend
   }
@@ -202,6 +204,7 @@ const addAxe = async (axe) => {
   axe.status = 'active'
   axe.capacity = axe.notional || axe.notional1
   axe.tradeStatus = 'available'
+  axe.views = []
   const newAxe = new Axe(axe)
   const result = await newAxe.save()
   if (result.dataValues) {
