@@ -7,44 +7,40 @@ const Email = require('../nodemailer')
 // Initial trade request (client to bank).
 // Checks that there is sufficient capacity remaining and that axe isn't currently being traded
 // Pushes the details of the client to the bank
-const trade = async (req, res) => {
+const RFQ = async (req, res) => {
   try {
     console.log('Trade', req.body)
-    const { userID, axeID, amount, delta } = req.body.data1
+    const { userID, axeID, amount } = req.body.data1
     const { capacity, remaining } = await DB.checkCapacity(axeID, amount)
-    console.log('*******', capacity, remaining)
+
     if (!capacity) {
       console.log('not capacity')
       res.send({ status: 'no capacity', remaining })
       return
     }
     const status = await DB.checkTradeStatus(axeID)
-    console.log('*******', status)
     if (!status) {
       res.send({ status: 'engaged' })
       return
     }
-    const { firstName, lastName, company } = await DB.getUser(userID)
-    const { name } = await DB.getCompany(company)
+    const { company } = await DB.getUser(userID)
+    const { type } = await DB.getCompany(company)
+    const axe = await DB.getAxeByID(axeID)
 
     const newTransaction = {
       clientTrader: userID,
       axeID,
       initialAmount: amount,
-      initialDelta: delta,
       initialRequestTime: new Date()
     }
     const transactionID = await DB.createTransaction(newTransaction)
+
+    tradeDetails = {transactionID, type, amount }
     // await DB.updateTradeStatus(axeID, 'engaged')
     req.body.socketID &&
-    req.app.io.to(req.body.socketID).emit('TradeRequest', {
-      firstName,
-      lastName,
-      company: name,
-      axeID,
-      amount,
-      delta,
-      transactionID
+      req.app.io.to(req.body.socketID).emit('TradeRequest', {
+      axe,
+      tradeDetails
     })
     res.send({ status: 'requesting' })
   } catch (error) {
@@ -110,7 +106,7 @@ const finaliseTrade = async (req, res) => {
 }
 
 module.exports = {
-  trade,
+  RFQ,
   cancelTrade,
   confirmPickup,
   editTrade,

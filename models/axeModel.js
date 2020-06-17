@@ -59,7 +59,13 @@ module.exports = (sequelize, Sequelize) => {
     KOBarrier: {
       type: Sequelize.DECIMAL,
     },
+    ref: {
+      type: Sequelize.STRING,
+    },
     spotRef: {
+      type: Sequelize.DECIMAL,
+    },
+    forwardRef: {
       type: Sequelize.DECIMAL,
     },
     NDFRef: {

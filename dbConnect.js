@@ -26,7 +26,7 @@ const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
+Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
@@ -38,7 +38,6 @@ const recordActivity = async (type, user) => {
 }
 
 const generateFilter = (query, type, companyID) => {
-  console.log('******', query, type, companyID)
   const DateOptions = {
     'O/N': 1,
     '<1w': 7,
@@ -80,7 +79,7 @@ const generateFilter = (query, type, companyID) => {
     end.setHours(23, 59, 59, 999)
     filter.where.expiryDate = { [Op.between]: [start, end] }
   }
-  if (query.filter) {
+  if (query.filter && query.filter !== 'All') {
     if (query.filter === 'O/N') {
       const endDate = new Date()
       endDate.setDate(endDate.getDate() + 1)
@@ -95,7 +94,8 @@ const generateFilter = (query, type, companyID) => {
         [Op.or]: ['One Touch (American)', 'European Digi', 'RKO'],
       }
     }
-    if (query.filter !== 'O/N' && query.filter !== '1st Gen Exotics') filter.where.category = query.filter
+    if (query.filter !== 'O/N' && query.filter !== '1st Gen Exotics')
+      filter.where.category = query.filter
   }
   return filter
   // Filters	Description	Examples
@@ -111,13 +111,14 @@ const getAxes = async (request) => {
   const { query, userID, company } = request
   const { type, id } = await getCompany(company)
   const filterApplied = generateFilter(query, type, id)
-  console.log('FA', filterApplied);
-  const results = await Axe.findAll(filterApplied)
-  const array = results.map((a) => a.dataValues)
+  const results = await Axe.findAll(filterApplied).map((a) => a.get({ plain: true }))
+  if (results.length === 0) return []
+  // raw: true
+  // const array = results.map((a) => a.dataValues)
   const user = await getUser(userID)
   // Remove sensitive information and any axes that a company has been excluded from
   if (user.type === 'Client') {
-    const newArray = array
+    const newArray = results
       .filter((a) => !a.excludeList.includes(company))
       .map(
         ({
@@ -135,10 +136,10 @@ const getAxes = async (request) => {
     return newArray
   }
   if (user.type === 'Bank-Sales') {
-    const newArray = array.map(({ notional, views, ...axe }) => axe)
+    const newArray = results.map(({ notional, views, ...axe }) => axe)
     return newArray
   }
-  if (user.type === 'Bank-Trader') return array
+  if (user.type === 'Bank-Trader') return results
 }
 
 const getAxe = async (userID, axeID) => {
@@ -168,8 +169,7 @@ const getAxe = async (userID, axeID) => {
     return dataToSend
   }
   if (user.type === 'Bank-Trader') {
-    console.log('*****BT****', axe);
-    let newViews = []
+    const newViews = []
     for (const view of axe.views) {
       const res = await getUserAndCompany(view)
       newViews.push(res)
@@ -228,27 +228,20 @@ const createAccount = async (user) => {
     user.firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)
     user.lastName = user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)
     const hashedPassword = await new Promise((resolve, reject) => {
-        bcrypt.hash(user.password, saltRounds, function(err, hash) {
-          if (err) reject(err)
-          resolve(hash)
-        });
+      bcrypt.hash(user.password, saltRounds, function (err, hash) {
+        if (err) reject(err)
+        resolve(hash)
       })
-      user.password = hashedPassword
-      const newUser = new User(user)
-      await newUser.save()
+    })
+    user.password = hashedPassword
+    const newUser = new User(user)
+    await newUser.save()
 
-    // const rrr = await bcrypt.hash(user.password, saltRounds, function (err, hash) {
-    //   user.password = hash
-    //   const newUser = new User(user)
-    //   let a =  newUser.save()
-    //   console.log('1', a);
-    // }).then(r => {
-
-      const uuu = await User.findAll({ where: { email: user.email } })
-      const company = await Company.findByPk(uuu[0].company)
-      company.staff = company.staff ? [...company.staff, uuu[0].id] : [uuu[0].id]
-      await company.save()
-      const companyUpdated = await Company.findByPk(uuu[0].company)
+    const uuu = await User.findAll({ where: { email: user.email } })
+    const company = await Company.findByPk(uuu[0].company)
+    company.staff = company.staff ? [...company.staff, uuu[0].id] : [uuu[0].id]
+    await company.save()
+    const companyUpdated = await Company.findByPk(uuu[0].company)
     return 200
   }
 }
@@ -265,8 +258,6 @@ const login = async ({ email, password }) => {
     const customLists = company.customLists
       ? await getCustomLists(company.customLists)
       : []
-    console.log('CLIENTS', company.clients);
-
     const clients = await generateClientList(company.clients)
     const dataToSend = {
       firstName: details.firstName,
@@ -280,24 +271,23 @@ const login = async ({ email, password }) => {
         ? details.productPreferences
         : [],
       type: details.type,
-      clients
+      clients,
     }
     Email.appAlerts('Login', `${details.firstName} ${details.lastName} `)
     return dataToSend
   }
 }
 
-
 const generateClientList = async (clients) => {
-  let res = []
+  const res = []
 
   for (const client of clients) {
-    let a = { staff: []}
+    const a = { staff: [] }
     const comp = await Company.findByPk(client)
     a.name = comp.name
     if (comp.staff) {
       for (const staff of comp.staff) {
-        let person = {}
+        const person = {}
         const user = await User.findByPk(staff)
         person.firstName = user.firstName
         person.lastName = user.lastName
@@ -307,8 +297,6 @@ const generateClientList = async (clients) => {
     }
     res.push(a)
   }
-
-  console.log('****', res);
   return res
 }
 
@@ -351,8 +339,8 @@ const getUser = async (userID) => {
 
 const getUserAndCompany = async (userID) => {
   const { firstName, lastName, company, type } = await User.findByPk(userID)
-  const {name} = await Company.findByPk(company)
-  return {company: name, type, firstName, lastName}
+  const { name } = await Company.findByPk(company)
+  return { company: name, type, firstName, lastName }
 }
 
 const getActivity = async () => {
@@ -370,7 +358,6 @@ const updateCompany = async (company) => {
   if (update[0] === 1) return 'success'
   return null
 }
-
 
 const updateUser = async (user) => {
   const update = await User.update(user, { where: { id: user.id } })
@@ -408,7 +395,7 @@ const getCustomLists = async (listIDs) => {
 const checkCapacity = async (axeID, amount) => {
   const axe = await Axe.findByPk(axeID)
   const check = axe.capacity >= amount
-  return { capacity: check, remaining: axe.capacity}
+  return { capacity: check, remaining: axe.capacity }
 }
 
 const updateCapacity = async (axeID, amount) => {
@@ -433,6 +420,10 @@ const getCompanyIDfromAxe = async (axeID) => {
   return axe.company
 }
 
+const getAxeByID = async (axeID) => {
+  const axe = await Axe.findByPk(axeID).then((data) => data.get({ plain: true }))
+  return axe
+}
 
 // Transaction tracking
 const createTransaction = async (transaction) => {
@@ -442,14 +433,10 @@ const createTransaction = async (transaction) => {
 }
 
 const updateTransaction = async (transactionID, updates) => {
-  const update = await Transaction.update(
-    updates,
-    { where: { id: transactionID } }
-  )
+  const update = await Transaction.update(updates, { where: { id: transactionID } })
   if (update[0] === 1) return 'success'
   return null
 }
-
 
 const getTransactions = async (request) => {
   const results = await Transaction.findAll()
@@ -481,6 +468,7 @@ module.exports = {
   checkCapacity,
   updateCapacity,
   checkTradeStatus,
+  getAxeByID,
   getCompanyIDfromAxe,
   updateTradeStatus,
   // Transaction trackiing

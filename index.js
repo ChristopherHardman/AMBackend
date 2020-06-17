@@ -26,13 +26,21 @@ io.on('connection', (socket) => {
     console.log('FULL Details')
     fullDetails(data)
   })
-  socket.on('submitChanges', (data) => {
-    console.log('Submit Changes', data)
+  socket.on('sendPrice', (data) => {
+    console.log('sendPrice', data)
     DB.updateTransaction(data.transactionID, {
       pricingVolChange: data.pricingVol,
       pricingVolChangeDate: new Date()
     })
-    io.emit('submitChanges', data)
+    io.emit('sendPrice', data)
+  })
+  socket.on('requestDelta', (delta) => {
+    console.log('requestDelta', delta)
+    // DB.updateTransaction(data.transactionID, {
+    //   pricingVolChange: data.pricingVol,
+    //   pricingVolChangeDate: new Date()
+    // })
+    io.emit('requestDelta', delta)
   })
   socket.on('confirmPriceChange', () => {
     console.log('CONFIRM PRICE CHANGE');
@@ -128,7 +136,7 @@ app.patch('/updateAxe', AxeController.updateAxe)
 app.post('/viewAxe', SearchController.viewAxe)
 
 // Trade
-app.post('/trade', socketMiddleware, TradeController.trade)
+app.post('/RFQ', socketMiddleware, TradeController.RFQ)
 
 server.listen(port, () => console.log(`AM backend listening on port ${port}!`))
 
