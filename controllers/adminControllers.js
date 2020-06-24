@@ -1,64 +1,35 @@
 const DB = require('../dbConnect')
 
-const getActivity = async (req, res) => {
-  try {
-    console.log('Get Activity', req.body)
-    const activity = await DB.getActivity()
-    res.send(activity)
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
-  }
+const getActivity = async (req, res, next) => {
+  const activity = await DB.getActivity().catch(next)
+  return res.send(activity)
 }
 
-const addCompany = async (req, res) => {
-  try {
-    console.log('Add Comapny', req.body)
-    const activity = req.body.label === 'add' ? await DB.addCompany(req.body.company) : await DB.updateCompany(req.body.company)
-    res.sendStatus(200)
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
-  }
+const addCompany = async (req, res, next) => {
+  const activity =
+    req.body.label === 'add'
+      ? await DB.addCompany(req.body.company).catch(next)
+      : await DB.updateCompany(req.body.company).catch(next)
+  res.sendStatus(200)
 }
 
-const getCompanies = async (req, res) => {
-  try {
-    console.log('Add Comapny', req.body)
-    const companies = await DB.getCompanies()
-    res.send(companies)
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
-  }
+const getCompanies = async (req, res, next) => {
+  const companies = await DB.getCompanies().catch(next)
+  res.send(companies)
 }
 
-const getUsers = async (req, res) => {
-  try {
-    console.log('Get Users', req.body)
-    const users = await DB.getUsers()
-    res.send(users)
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
-  }
+const getUsers = async (req, res, next) => {
+  const users = await DB.getUsers().catch(next)
+  res.send(users)
 }
 
-const getTradingLog = async (req, res) => {
-  try {
-    console.log('Get Trading Log')
-    const transactions = await DB.getTransactions()
-    res.send(transactions)
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
-  }
+const getTradingLog = async (req, res, next) => {
+  const transactions = await DB.getTransactions().catch(next)
+  res.send(transactions)
 }
-
 
 // Used during testing to add sample companies and users into DB
 const populate = async () => {
-  console.log('Populate');
   const Companies = [
     { clients: [], name: 'HSBC', type: 'Bank' },
     { clients: [], name: 'Hedge Fund 1', type: 'Hedge Fund' },
@@ -124,8 +95,6 @@ const populate = async () => {
     }
   }
 }
-
-// populateDB()
 
 module.exports = {
   getActivity,

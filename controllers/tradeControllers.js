@@ -11,10 +11,10 @@ const RFQ = async (req, res) => {
   try {
     console.log('Trade', req.body)
     const { userID, axeID, amount } = req.body.data1
+    const { activeTraders } = req.body
     const { capacity, remaining } = await DB.checkCapacity(axeID, amount)
 
     if (!capacity) {
-      console.log('not capacity')
       res.send({ status: 'no capacity', remaining })
       return
     }
@@ -23,6 +23,11 @@ const RFQ = async (req, res) => {
       res.send({ status: 'engaged' })
       return
     }
+    if (activeTraders.length === 0) {
+      res.send({ status: 'no trader' })
+      return
+    }
+
     const { company } = await DB.getUser(userID)
     const { type } = await DB.getCompany(company)
     const axe = await DB.getAxeByID(axeID)
@@ -35,17 +40,51 @@ const RFQ = async (req, res) => {
     }
     const transactionID = await DB.createTransaction(newTransaction)
 
-    tradeDetails = {transactionID, type, amount }
+    tradeDetails = { transactionID, type, amount }
     // await DB.updateTradeStatus(axeID, 'engaged')
-    req.body.socketID &&
-      req.app.io.to(req.body.socketID).emit('TradeRequest', {
-      axe,
-      tradeDetails
-    })
+    // req.body.socketID &&
+    activeTraders.forEach( t =>
+      req.app.io.to(t.socketID).emit('TradeRequest', {
+        axe,
+        tradeDetails
+      })
+    )
     res.send({ status: 'requesting' })
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)
+  }
+}
+
+// Cancel trade - either client or bank cancels
+const pickup = async (data, users) => {
+  try {
+    console.log('pickup', data, users);
+    let {clientTrader} = await DB.getTransaction(data.transactionID)
+    await DB.updateTransaction(data.transactionID, {
+      pickupTime: new Date(),
+      bankTrader: data.userID,
+    })
+    const targetSocket = users.filter( u => u.userID === clientTrader)
+    console.log('TARGET SOCKET', clientTrader, targetSocket);
+    return targetSocket[0].socketID
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+
+// Cancel trade - either client or bank cancels
+const sendPrice = async (data) => {
+  try {
+    console.log('Send Price', data)
+    console.log('UUUU', users);
+    DB.updateTransaction(data.transactionID, {
+      pricingVolChange: data.pricingVol,
+      pricingVolChangeDate: new Date()
+    })
+  } catch (error) {
+    console.log('ERROR', error)
   }
 }
 
@@ -73,7 +112,6 @@ const confirmPickup = async (req, res) => {
 const fullDetails = async (data) => {
   try {
     console.log('FFF DDD')
-
 
     req.app.io.emit('fullDetails', data)
   } catch (error) {
@@ -107,9 +145,11 @@ const finaliseTrade = async (req, res) => {
 
 module.exports = {
   RFQ,
+  pickup,
+  sendPrice,
   cancelTrade,
   confirmPickup,
   editTrade,
   finaliseTrade,
-  fullDetails
+  fullDetails,
 }

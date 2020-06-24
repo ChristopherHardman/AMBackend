@@ -1,15 +1,12 @@
 const jwt = require('jsonwebtoken')
 const DB = require('../dbConnect')
 
-const createAccount = async (req, res) => {
-  console.log('UUUSSSEEERRRR', req.body);
-  try {
-    const create = req.body.label === 'add' ? await DB.createAccount(req.body.user) : await DB.updateUser(req.body.user)
-    res.sendStatus(create)
-  } catch (error) {
-    console.log('CREAT ACCOUNT ERROR', error)
-    res.sendStatus(500)
-  }
+const createAccount = async (req, res, next) => {
+  const create =
+    req.body.label === 'add'
+      ? await DB.createAccount(req.body.user).catch(next)
+      : await DB.updateUser(req.body.user).catch(next)
+  return res.sendStatus(create)
 }
 
 const signIn = async (req, res) => {
@@ -33,32 +30,19 @@ const signIn = async (req, res) => {
   }
 }
 
-const customList = async (req, res) => {
-  try {
-    const newList = await DB.addCustomList(req.body)
-    res.send(newList)
-  } catch (error) {
-    res.sendStatus(500)
-  }
+const customList = async (req, res, next) => {
+  const newList = await DB.addCustomList(req.body).catch(next)
+  return res.send(newList)
 }
 
-const deleteCustomList = async (req, res) => {
-  try {
-    const newList = await DB.deleteCustomList(req.body)
-    res.send(newList)
-  } catch (error) {
-    res.sendStatus(500)
-  }
+const deleteCustomList = async (req, res, next) => {
+  const newList = await DB.deleteCustomList(req.body).catch(next)
+  return res.send(newList)
 }
 
-const savePreferences = async (req, res) => {
-  try {
-    console.log('Save Preferences', req.body)
-    const newPreferences = await DB.savePreferences(req.body)
-    res.send(newPreferences)
-  } catch (error) {
-    res.sendStatus(500)
-  }
+const savePreferences = async (req, res, next) => {
+  const newPreferences = await DB.savePreferences(req.body).catch(next)
+  return res.send(newPreferences)
 }
 
 const createAlert = async (req, res) => {

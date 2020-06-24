@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt')
 const Email = require('./nodemailer')
 
 const saltRounds = 10
-const Environment = 'development'
+const Environment = 'test'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -91,7 +91,7 @@ const generateFilter = (query, type, companyID) => {
     }
     if (query.filter === '1st Gen Exotics') {
       filter.where.product = {
-        [Op.or]: ['One Touch (American)', 'European Digi', 'RKO'],
+        [Op.or]: ['One Touch (American)', 'European Digital', 'RKO'],
       }
     }
     if (query.filter !== 'O/N' && query.filter !== '1st Gen Exotics')
@@ -150,7 +150,6 @@ const getAxe = async (userID, axeID) => {
   )
   // Remove sensitive information and any axes that a company has been excluded from
   if (user.type === 'Client') {
-    // Assuming we are only counting client views
     axe.views = axe.views ? [...axe.views, userID] : [userID]
     await axe.save()
     delete dataToSend.traderName
@@ -164,6 +163,7 @@ const getAxe = async (userID, axeID) => {
     return dataToSend
   }
   if (user.type === 'Bank-Sales') {
+    axe.views = axe.views ? [...axe.views, userID] : [userID]
     delete dataToSend.notional
     delete dataToSend.views
     return dataToSend
@@ -215,7 +215,10 @@ const addAxe = async (axe) => {
   return 401
 }
 
-const updateAxe = async (axe) => {
+const updateAxe = async (axe, userID) => {
+  delete axe.views
+  axe.lastUpdate = new Date()
+  axe.updater = userID
   const update = await Axe.update(axe, { where: { id: axe.id } })
   if (update[0] === 1) return 'success'
   return null
@@ -438,6 +441,11 @@ const updateTransaction = async (transactionID, updates) => {
   return null
 }
 
+const getTransaction = async (transactionID) => {
+  const transaction = await Transaction.findByPk(transactionID).then((data) => data.get({ plain: true }))
+  return transaction
+}
+
 const getTransactions = async (request) => {
   const results = await Transaction.findAll()
   const array = results.map((a) => a.dataValues)
@@ -474,5 +482,6 @@ module.exports = {
   // Transaction trackiing
   createTransaction,
   updateTransaction,
+  getTransaction,
   getTransactions,
 }
