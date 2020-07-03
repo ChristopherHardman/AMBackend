@@ -153,6 +153,10 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.STRING,
       allowNull: false,
     },
+    updater: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
     views: {
       type: Sequelize.ARRAY(Sequelize.STRING),
       // allowNull: false,

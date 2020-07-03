@@ -18,31 +18,30 @@ let users = []
 io.on('connection', (socket) => {
   socket.on('token', (data) => {
     users.push({ socketID: socket.id, userID: data.userID, companyID: data.company })
+    // socket.join(data.userID)
   })
 
-  socket.on('pickup', (data) => {
-    TradeController.pickup(data, users).
-    then((socketID) =>  {
-      console.log('&&&&&&&&', socketID);
-      // io.to(socketID).emit('Pickup', 'Pickup')
-      io.emit('Pickup', 'Pickup')
-      }
-    )
-  })
+  socket.on('decline', (data) => TradeController.decline(data))
 
-  socket.on('sendPrice', (data) => {
-    // TradeController.sendPrice(data, users)
-    io.emit('sendPrice', data)
-  })
+  socket.on('pickup', (data) => TradeController.pickup(data, users, io))
 
-  socket.on('requestDelta', (delta) => {
-    console.log('requestDelta', delta)
-    // DB.updateTransaction(data.transactionID, {
-      //   pricingVolChange: data.pricingVol,
-      //   pricingVolChangeDate: new Date()
-      // })
-      io.emit('requestDelta', delta)
-    })
+  socket.on('release', (data) => TradeController.release(data, io))
+
+  socket.on('sendPrice', (data) => TradeController.sendPrice(data, io))
+
+  socket.on('sendDelta', (data) => TradeController.sendDelta(data, io))
+
+  socket.on('requestDelta', (data) => TradeController.requestDelta(data, io))
+
+  socket.on('accept', (data) => TradeController.accept(data, io))
+
+  socket.on('sendDelta', (data) => TradeController.sendDelta(data, io))
+
+  socket.on('clientAccept', (data) => TradeController.clientAccept(data, io))
+
+
+
+  socket.on('confirmDetails', (data) => TradeController.confirmDetails(data, io))
 
   socket.on('RefPrice', (data) => {
     io.emit('RefPrice', 'RefPrice')

@@ -25,7 +25,7 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+//User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
 // Axe.sync({ force: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
@@ -205,6 +205,8 @@ const addAxe = async (axe) => {
   axe.capacity = axe.notional || axe.notional1
   axe.tradeStatus = 'available'
   axe.views = []
+  axe.updater = axe.traderName
+  if (!axe.minimumTrade) axe.minimumTrade = 1
   const newAxe = new Axe(axe)
   const result = await newAxe.save()
   if (result.dataValues) {
@@ -216,9 +218,12 @@ const addAxe = async (axe) => {
 }
 
 const updateAxe = async (axe, userID) => {
+  console.log(axe, userID);
   delete axe.views
-  axe.lastUpdate = new Date()
-  axe.updater = userID
+  // axe.lastUpdate = new Date()
+  // Update capacity if notional has been updated
+  const { firstName, lastName } = await getUser(userID)
+  axe.updater = `${firstName} ${lastName}`
   const update = await Axe.update(axe, { where: { id: axe.id } })
   if (update[0] === 1) return 'success'
   return null
@@ -469,6 +474,7 @@ module.exports = {
   getCompany,
   login,
   getUser,
+  getUserAndCompany,
   getCompanies,
   updateAxe,
   savePreferences,

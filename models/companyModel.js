@@ -20,6 +20,10 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.ARRAY(Sequelize.STRING),
       allowNull: true,
     },
+    email: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
     id: {
       allowNull: false,
       primaryKey: true,
