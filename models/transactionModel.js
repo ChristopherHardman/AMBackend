@@ -48,6 +48,12 @@ module.exports = (sequelize, Sequelize) => {
     completeTime: {
       type: Sequelize.DATE
     },
+    cancelledBy: {
+      type: Sequelize.STRING,
+    },
+    cancelTime: {
+      type: Sequelize.DATE,
+    },
     id: {
       allowNull: false,
       primaryKey: true,

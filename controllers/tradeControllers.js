@@ -8,31 +8,18 @@ const Email = require('../nodemailer')
 // the request is sent to all other traders at the relevant bank
 const RFQ = async (req, res) => {
   try {
-    console.log('Trade', req.body)
     const { userID, axeID, amount } = req.body.data1
     const { activeTraders } = req.body
     const { capacity, remaining } = await DB.checkCapacity(axeID, amount)
-    console.log('Active Traders', activeTraders);
-
-    if (!capacity) {
-      res.send({ status: 'no capacity', remaining })
-      return
-    }
-    const status = await DB.checkTradeStatus(axeID)
-    if (!status) {
-      res.send({ status: 'engaged' })
-      return
-    }
-    if (activeTraders.length === 0) {
-      res.send({ status: 'no trader' })
-      return
-    }
 
     const { company } = await DB.getUser(userID)
     const { type } = await DB.getCompany(company)
     const axe = await DB.getAxeByID(axeID)
 
+    // Create a new transaction
     const newTransaction = {
+      bankCompany: axe.company,
+      clientCompany: company,
       clientTrader: userID,
       axeID,
       initialAmount: amount,
@@ -40,27 +27,70 @@ const RFQ = async (req, res) => {
     }
     const transactionID = await DB.createTransaction(newTransaction)
 
-    tradeDetails = { transactionID, type, amount }
-    // await DB.updateTradeStatus(axeID, 'engaged')
-    // req.body.socketID &&
-    const isAxeCreatorAvailable = activeTraders.filter(
-      (t) => t.userID === axe.trader
-    )[0]
-    console.log('Available?', isAxeCreatorAvailable)
-    if (isAxeCreatorAvailable) {
-
+    // Check remaining capacity
+    if (!capacity) {
+      res.send({ status: 'no capacity', remaining })
+      return
     }
 
-    if (!isAxeCreatorAvailable) {
-      activeTraders.forEach( t =>
-        req.app.io.to(t.socketID).emit('TradeRequest', {
-          axe,
-          tradeDetails
-        })
-      )
+    // Check if axe is currently being traded
+    // const status = await DB.checkTradeStatus(axeID)
+    // if (status !== 'available') {
+    //   res.send({ status: 'engaged' })
+    //   return
+    // }
+
+    // Check if anyone from the bank is online
+    const companyRoom = await new Promise((resolve, reject) => {
+      req.app.io.in(axe.company).clients((err, clients) => {
+        console.log('ROOM Length', clients.length);
+        if (err) reject(err)
+        resolve(clients.length)
+      })
+    })
+    if (companyRoom === 0) {
+      res.send({ status: 'no trader' })
+      return
     }
 
-    res.send({ status: 'requesting' })
+    const tradeDetails = { transactionID, type, amount }
+
+    // await DB.updateTradeStatus(axeID, 'requesting')
+
+    // Check is trader linked to axe is online - if so, alert them first and
+    // give them 10 seconds to respond. If not online or hasn't picked-up after 10
+    // seconds, other members of the bank
+    const createrRoom = await new Promise((resolve, reject) => {
+      req.app.io.in(axe.userID).clients((err, clients) => {
+        if (err) reject(err)
+        resolve(clients.length)
+      })
+    })
+    if (createrRoom !== 0) {
+      console.log('CREATOR', axe.userID);
+      req.app.io.to(axe.userID).emit('TradeRequest', {
+        axe,
+        tradeDetails
+      })
+
+      setTimeout(async () => {
+        const status = await DB.checkTradeStatus(axeID)
+        if (status === 'available') {
+          req.app.io.to(axe.company).emit('TradeRequest', {
+            axe,
+            tradeDetails
+          })
+        }
+      }, 10000)
+    }
+
+    if (createrRoom === 0) {
+      req.app.io.to(axe.company).emit('TradeRequest', {
+        axe,
+        tradeDetails
+      })
+    }
+    res.send({ status: 'requesting', transactionID })
   } catch (error) {
     console.log('ERROR', error)
     res.sendStatus(500)
@@ -68,54 +98,105 @@ const RFQ = async (req, res) => {
 }
 
 // Someone from the bank picksup RFQ
+// Record pickup, update status of the axe and inform client
 const pickup = async (data, users, io) => {
   try {
     console.log('pickup', data, users);
-    let {clientTrader} = await DB.getTransaction(data.transactionID)
+    let { clientTrader, axeID } = await DB.getTransaction(data.transactionID)
     await DB.updateTransaction(data.transactionID, {
       pickupTime: new Date(),
       bankTrader: data.userID,
     })
-    const targetSocket = users.filter( u => u.userID === clientTrader)
-    // let a = Object.keys(io.sockets.connected)
-    // let z = io.sockets.connected
-    // a.forEach(k => io.to(k).emit('Pickup', k))
-    io.emit('Pickup', 'Pickup')
+    await DB.updateTradeStatus(axeID, 'pickedUp')
+    io.to(clientTrader).emit('Pickup', data.transactionID)
   } catch (error) {
     console.log('ERROR', error)
   }
 }
-
 
 // Someone from the bank declines RFQ
+// To do - manage the situation where axe is declined by all bank traders
 const decline = async (data) => {
   try {
-    console.log('DDDD', data);
+    console.log('Decline', data);
   } catch (error) {
     console.log('ERROR', error)
   }
 }
 
+// Client requests to ref RFQ
+const refRFQ = async (data, io) => {
+  try {
+    console.log('Ref RFQ', data)
+    const { bankTrader } = await DB.getTransaction(data.transactionID)
+    io.to(bankTrader).emit('RefRFQ', 'RefRFQ')
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+// Bank requests to ref Price
+const refPrice = async (data, io) => {
+  try {
+    console.log('Ref Price', data)
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    io.to(clientTrader).emit('RefPrice', 'RefPrice')
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+// Bank trader picks up trade request but then releases interval
+// Inform client that trade has been released and resend trade request to all bank traders
+const release = async (data, io) => {
+  try {
+    console.log('Release', data)
+    const {
+      clientTrader,
+      clientCompany,
+      axeID,
+      initialAmount,
+      bankCompany,
+      id,
+    } = await DB.getTransaction(data.transactionID)
+    const { type } = await DB.getCompany(clientCompany)
+    const axe = await DB.getAxeByID(axeID)
+    const tradeDetails = { transactionID: id, type, amount: initialAmount }
+    io.to(clientTrader).emit('Release')
+    io.to(bankCompany).emit('TradeRequest', {
+      axe,
+      tradeDetails
+    })
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
 
 // Bank sends price to client
 const sendPrice = async (data, io) => {
   try {
     console.log('Send Price', data)
+    // TO DO: update axe details
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
     DB.updateTransaction(data.transactionID, {
       pricingVolChange: data.pricingVol,
       pricingVolChangeDate: new Date()
     })
-    io.emit('sendPrice', data)
+    io.to(clientTrader).emit('SendPrice', data)
   } catch (error) {
     console.log('ERROR', error)
   }
 }
 
 
-// Cancel trade - either client or bank cancels
 const requestDelta = async (data, io) => {
   try {
-    io.emit('requestDelta', data)
+    const { transactionID, delta } = data
+    const { bankTrader } = await DB.getTransaction(transactionID)
+    DB.updateTransaction(transactionID, {
+      initialDelta: delta,
+    })
+    io.to(bankTrader).emit('RequestDelta', delta)
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -124,50 +205,22 @@ const requestDelta = async (data, io) => {
 const accept = async (data, io) => {
   try {
     console.log('ACCEPT', data);
-    // let {clientTrader} = await DB.getTransaction(data.transaction)
-    // let dataToSend = await DB.getUserAndCompany(clientTrader)
-    // console.log('DDDDD', dataToSend);
-    // let transaction = await DB.getTransaction(data.transaction)
-    let {clientTrader} = await DB.getTransaction(data.transaction)
+    let {clientTrader, bankTrader} = await DB.getTransaction(data.transaction)
     let dataToSend = await DB.getUserAndCompany(clientTrader)
-    // io.emit('accept')
-    io.emit('clientDetails', dataToSend)
-
-    // io.emit('accept', dataToSend)
+    io.to(bankTrader).emit('ClientDetails', dataToSend)
   } catch (error) {
     console.log('ERROR', error)
   }
 }
 
-
-const confirmDetails = async (data, io) => {
-  try {
-    console.log('Confirm Details', data);
-    let {clientTrader} = await DB.getTransaction(data.transaction)
-    let dataToSend = await DB.getUserAndCompany(clientTrader)
-    io.emit('clientDetails', dataToSend)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-
-const release = async (data, io) => {
-  try {
-    console.log('Release')
-    io.emit('release',)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
 
 const sendDelta = async (data, io) => {
   try {
     console.log('Send Delta', data)
-    let {bankTrader} = await DB.getTransaction(data.transaction)
-    let dataToSend = await DB.getUserAndCompany(bankTrader)
-    console.log('TTT', dataToSend);
-    io.emit('sendDelta', dataToSend)
+    let {clientTrader, bankTrader} = await DB.getTransaction(data.transaction)
+    let bankDetails = await DB.getUserAndCompany(bankTrader)
+    const dataToSend = { bankDetails, deltaUpdate: data.deltaUpdate}
+    io.to(clientTrader).emit('SendDelta', dataToSend)
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -177,7 +230,24 @@ const sendDelta = async (data, io) => {
 const clientAccept = async (data, io) => {
   try {
     console.log('Client Accept')
-    io.emit('clientAccept')
+    io.emit('ClientAccept')
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+
+// Client request times out for live trade
+const timedOut = async (data, io) => {
+  try {
+    console.log('Timed out', data)
+    // const { transactionID, userID } = data
+    // DB.updateTransaction(transactionID, {
+    //   cancelledBy: userID,
+    //   cancelTime: new Date()
+    // })
+    // const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
+    // io.to(clientTrader).to(bankTrader).emit('Cancel')
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -185,12 +255,18 @@ const clientAccept = async (data, io) => {
 
 
 // Cancel trade - either client or bank cancels
-const cancelTrade = async (req, res) => {
+const cancelTrade = async (data, io) => {
   try {
-    console.log('Confirm Pickup', req.body)
+    console.log('Cancel Trade', data)
+    const { transactionID, userID } = data
+    DB.updateTransaction(transactionID, {
+      cancelledBy: userID,
+      cancelTime: new Date()
+    })
+    const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
+    io.to(clientTrader).to(bankTrader).emit('Cancel')
   } catch (error) {
     console.log('ERROR', error)
-    res.sendStatus(500)
   }
 }
 
@@ -199,20 +275,9 @@ const cancelTrade = async (req, res) => {
 const fullDetails = async (data) => {
   try {
     console.log('FFF DDD')
-
     req.app.io.emit('fullDetails', data)
   } catch (error) {
     console.log('ERROR', error)
-  }
-}
-
-// Receive edit to axe from bank. Update the axe record and send to the client to confirm.
-const editTrade = async (req, res) => {
-  try {
-    console.log('Confirm Pickup', req.body)
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
   }
 }
 
@@ -236,11 +301,35 @@ module.exports = {
   decline,
   sendPrice,
   cancelTrade,
-  editTrade,
+  timedOut,
+  // editTrade,
   release,
   clientAccept,
   requestDelta,
   sendDelta,
+  refRFQ,
+  refPrice,
   finaliseTrade,
   fullDetails,
 }
+
+// const confirmDetails = async (data, io) => {
+//   try {
+//     console.log('Confirm Details', data);
+//     let {clientTrader} = await DB.getTransaction(data.transaction)
+//     let dataToSend = await DB.getUserAndCompany(clientTrader)
+//     io.emit('clientDetails', dataToSend)
+//   } catch (error) {
+//     console.log('ERROR', error)
+//   }
+// }
+
+// Receive edit to axe from bank. Update the axe record and send to the client to confirm.
+// const editTrade = async (req, res) => {
+//   try {
+//     console.log('Confirm Pickup', req.body)
+//   } catch (error) {
+//     console.log('ERROR', error)
+//     res.sendStatus(500)
+//   }
+// }

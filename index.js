@@ -13,52 +13,63 @@ const Email = require('./nodemailer')
 
 const port = process.env.PORT || 3001
 
-let users = []
+let users = {}
 
-io.on('connection', (socket) => {
+// io.use((socket, next) => {
+//   let token = socket.handshake.query.token;
+//   console.log('USING', token);
+//   return next()
+// });
+
+io.on('connection', async (socket) => {
+  console.log('****', socket.id, socket.handshake.query.token);
+  const a = socket.id
+  io.to(a).emit('justConnected', socket.id)
+
+  // Do we need this?
   socket.on('token', (data) => {
-    users.push({ socketID: socket.id, userID: data.userID, companyID: data.company })
-    // socket.join(data.userID)
+    users[data.userID] = data.socketID
+    socket.join(data.company)
+    socket.join(data.userID)
+    socket.join(123)
   })
 
-  socket.on('decline', (data) => TradeController.decline(data))
+  socket.on('Decline', (data) => TradeController.decline(data))
 
-  socket.on('pickup', (data) => TradeController.pickup(data, users, io))
+  socket.on('pickup', async (data) => TradeController.pickup(data, users, io))
 
-  socket.on('release', (data) => TradeController.release(data, io))
+  socket.on('Release', (data) => TradeController.release(data, io))
 
-  socket.on('sendPrice', (data) => TradeController.sendPrice(data, io))
+  socket.on('SendPrice', (data) => TradeController.sendPrice(data, io))
 
-  socket.on('sendDelta', (data) => TradeController.sendDelta(data, io))
+  socket.on('SendDelta', (data) => TradeController.sendDelta(data, io))
 
-  socket.on('requestDelta', (data) => TradeController.requestDelta(data, io))
+  socket.on('RequestDelta', (data) => TradeController.requestDelta(data, io))
 
-  socket.on('accept', (data) => TradeController.accept(data, io))
+  socket.on('Accept', (data) => TradeController.accept(data, io))
 
-  socket.on('sendDelta', (data) => TradeController.sendDelta(data, io))
+  socket.on('SendDelta', (data) => TradeController.sendDelta(data, io))
 
-  socket.on('clientAccept', (data) => TradeController.clientAccept(data, io))
+  socket.on('ClientAccept', (data) => TradeController.clientAccept(data, io))
+
+  socket.on('ConfirmDetails', (data) => TradeController.confirmDetails(data, io))
+
+  socket.on('RefPrice', (data) => TradeController.refPrice(data, io))
+
+  socket.on('RefRFQ', (data) => TradeController.refRFQ(data, io))
+
+  socket.on('TimedOut', (data) => TradeController.timedOut(data, io))
 
 
 
-  socket.on('confirmDetails', (data) => TradeController.confirmDetails(data, io))
-
-  socket.on('RefPrice', (data) => {
-    io.emit('RefPrice', 'RefPrice')
-  })
-
-  socket.on('refRFQ', () => {
-    io.emit('refRFQ', 'refRFQ')
-  })
-
-  socket.on('fullDetails', (data) => {
+  socket.on('FullDetails', (data) => {
     fullDetails(data)
   })
-  socket.on('confirmPriceChange', () => {
+  socket.on('ConfirmPriceChange', () => {
     console.log('CONFIRM PRICE CHANGE');
     io.emit('ConfirmPriceChange', 'ConfirmPriceChange')
   })
-  socket.on('tradeConfirmed', () => {
+  socket.on('TradeConfirmed', () => {
     io.emit('TradeConfirmed', 'TradeConfirmed')
   })
   socket.on('TradeConfirmedClient', (data) => {
@@ -67,16 +78,15 @@ io.on('connection', (socket) => {
     // io.emit('TradeConfirmedClient')
     // Email.confirmTrade('confirmations@axedmarkets.com', details)
   })
-  socket.on('refQuote', () => {
-    io.emit('refQuote', 'refQuote')
+  socket.on('RefQuote', () => {
+    io.emit('RefQuote', 'refQuote')
   })
-  socket.on('Cancel', () => {
-    console.log('Cancel')
-    io.emit('Cancel', 'Cancel')
-  })
+
+  socket.on('Cancel', (data) => TradeController.cancelTrade(data, io))
+
   socket.on('disconnect', () => {
     console.log('Client disconnected', socket.id)
-    users = users.filter((u) => u.socketID !== socket.id)
+    // users = users.filter((u) => u.socketID !== socket.id)
   })
 })
 
@@ -114,10 +124,11 @@ const tradeConfirmedClient = async (data) => {
 
 //
 const socketMiddleware = async (req, res, next) => {
-  console.log('rrrr', req.body);
-  const companyID = await DB.getCompanyIDfromAxe(req.body.data1.axeID)
-  const activeTraders = users.filter((u) => u.companyID === companyID)
-  req.body.activeTraders = activeTraders
+  // console.log('rrrr', req.body);
+  // const companyID = await DB.getCompanyIDfromAxe(req.body.data1.axeID)
+  // const activeTraders = users.filter((u) => u.companyID === companyID)
+  // req.body.activeTraders = activeTraders
+  req.body.activeTraders = users
   await next()
 }
 
@@ -148,10 +159,12 @@ app.post('/viewAxe', SearchController.viewAxe)
 
 // Trade
 app.post('/RFQ', socketMiddleware, TradeController.RFQ)
+app.post('/pickup', socketMiddleware, TradeController.pickup)
 
+// Error handling
 app.use((error, req, res, next) => {
-  console.log('ERROR', error);
-  return res.status(500).json({ error: error.toString() });
+  console.log('ERROR', error)
+  return res.status(500).json({ error: error.toString() })
 });
 
 

@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt')
 const Email = require('./nodemailer')
 
 const saltRounds = 10
-const Environment = 'development'
+const Environment = 'test'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -293,6 +293,8 @@ const generateClientList = async (clients) => {
     const a = { staff: [] }
     const comp = await Company.findByPk(client)
     a.name = comp.name
+    a.type = comp.type
+    a.id = comp.id
     if (comp.staff) {
       for (const staff of comp.staff) {
         const person = {}
@@ -346,9 +348,9 @@ const getUser = async (userID) => {
 }
 
 const getUserAndCompany = async (userID) => {
-  const { firstName, lastName, company, type } = await User.findByPk(userID)
+  const { firstName, lastName, company, type, telephone, location } = await User.findByPk(userID)
   const { name } = await Company.findByPk(company)
-  return { company: name, type, firstName, lastName }
+  return { company: name, type, firstName, lastName, telephone, location }
 }
 
 const getActivity = async () => {
@@ -414,7 +416,7 @@ const updateCapacity = async (axeID, amount) => {
 
 const checkTradeStatus = async (axeID) => {
   const axe = await Axe.findByPk(axeID)
-  return axe.tradeStatus === 'available'
+  return axe.tradeStatus
 }
 
 const updateTradeStatus = async (axeID, status) => {
