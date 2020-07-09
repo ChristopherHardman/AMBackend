@@ -73,15 +73,15 @@ const RFQ = async (req, res) => {
         tradeDetails
       })
 
-      setTimeout(async () => {
-        const status = await DB.checkTradeStatus(axeID)
-        if (status === 'available') {
-          req.app.io.to(axe.company).emit('TradeRequest', {
-            axe,
-            tradeDetails
-          })
-        }
-      }, 10000)
+      // setTimeout(async () => {
+      //   const status = await DB.checkTradeStatus(axeID)
+      //   if (status === 'available') {
+      //     req.app.io.to(axe.company).emit('TradeRequest', {
+      //       axe,
+      //       tradeDetails
+      //     })
+      //   }
+      // }, 10000)
     }
 
     if (createrRoom === 0) {
