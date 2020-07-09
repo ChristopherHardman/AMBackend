@@ -30,7 +30,7 @@ const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
-Transaction.sync({ force: true })
+// Transaction.sync({ force: true })
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
