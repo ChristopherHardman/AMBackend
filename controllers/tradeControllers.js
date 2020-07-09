@@ -229,7 +229,7 @@ const sendDelta = async (data, io) => {
 
 const clientAccept = async (data, io) => {
   try {
-    console.log('Client Accept')
+    console.log('Client Accept', data)
     io.emit('ClientAccept')
   } catch (error) {
     console.log('ERROR', error)
@@ -241,13 +241,8 @@ const clientAccept = async (data, io) => {
 const timedOut = async (data, io) => {
   try {
     console.log('Timed out', data)
-    // const { transactionID, userID } = data
-    // DB.updateTransaction(transactionID, {
-    //   cancelledBy: userID,
-    //   cancelTime: new Date()
-    // })
-    // const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
-    // io.to(clientTrader).to(bankTrader).emit('Cancel')
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    io.to(clientTrader).emit('TimedOut')
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -270,30 +265,6 @@ const cancelTrade = async (data, io) => {
   }
 }
 
-
-// Lets the client know that the bank has picked-up Alert
-const fullDetails = async (data) => {
-  try {
-    console.log('FFF DDD')
-    req.app.io.emit('fullDetails', data)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-// Confirms trade (either on initial request or if the edit is accepted)
-// Sends email update to both parties and records the trade
-// Updates the axe record - either changing it to trade or showing amount filled
-const finaliseTrade = async (req, res) => {
-  try {
-    console.log('Finalise trade', req.body)
-    Email.confirmTrade('chrisdelatopher@gmail.com')
-  } catch (error) {
-    console.log('ERROR', error)
-    res.sendStatus(500)
-  }
-}
-
 module.exports = {
   accept,
   RFQ,
@@ -302,34 +273,10 @@ module.exports = {
   sendPrice,
   cancelTrade,
   timedOut,
-  // editTrade,
   release,
   clientAccept,
   requestDelta,
   sendDelta,
   refRFQ,
   refPrice,
-  finaliseTrade,
-  fullDetails,
 }
-
-// const confirmDetails = async (data, io) => {
-//   try {
-//     console.log('Confirm Details', data);
-//     let {clientTrader} = await DB.getTransaction(data.transaction)
-//     let dataToSend = await DB.getUserAndCompany(clientTrader)
-//     io.emit('clientDetails', dataToSend)
-//   } catch (error) {
-//     console.log('ERROR', error)
-//   }
-// }
-
-// Receive edit to axe from bank. Update the axe record and send to the client to confirm.
-// const editTrade = async (req, res) => {
-//   try {
-//     console.log('Confirm Pickup', req.body)
-//   } catch (error) {
-//     console.log('ERROR', error)
-//     res.sendStatus(500)
-//   }
-// }

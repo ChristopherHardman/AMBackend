@@ -52,35 +52,11 @@ io.on('connection', async (socket) => {
 
   socket.on('ClientAccept', (data) => TradeController.clientAccept(data, io))
 
-  socket.on('ConfirmDetails', (data) => TradeController.confirmDetails(data, io))
-
   socket.on('RefPrice', (data) => TradeController.refPrice(data, io))
 
   socket.on('RefRFQ', (data) => TradeController.refRFQ(data, io))
 
   socket.on('TimedOut', (data) => TradeController.timedOut(data, io))
-
-
-
-  socket.on('FullDetails', (data) => {
-    fullDetails(data)
-  })
-  socket.on('ConfirmPriceChange', () => {
-    console.log('CONFIRM PRICE CHANGE');
-    io.emit('ConfirmPriceChange', 'ConfirmPriceChange')
-  })
-  socket.on('TradeConfirmed', () => {
-    io.emit('TradeConfirmed', 'TradeConfirmed')
-  })
-  socket.on('TradeConfirmedClient', (data) => {
-    tradeConfirmedClient(data)
-    // console.log('TCC')
-    // io.emit('TradeConfirmedClient')
-    // Email.confirmTrade('confirmations@axedmarkets.com', details)
-  })
-  socket.on('RefQuote', () => {
-    io.emit('RefQuote', 'refQuote')
-  })
 
   socket.on('Cancel', (data) => TradeController.cancelTrade(data, io))
 
@@ -90,44 +66,7 @@ io.on('connection', async (socket) => {
   })
 })
 
-
-const fullDetails = async (data) => {
-  const {firstName, lastName, company} = await DB.getUser(data.userID)
-  data.traderName = `${firstName} ${lastName}`
-  const {name} =  await DB.getCompany(company)
-  data.companyName = name
-  io.emit('fullDetails', data)
-  const transactionUpdate = {
-    confirmTime: new Date(),
-    bankTrader: data.userID,
-    confirmedAmount: data.amount,
-    forwardDate: data.forwardDate,
-    confirmedPrice: data.price,
-    optionPremium: data.optionPremium
-  }
-  DB.updateTransaction(data.transactionID, transactionUpdate)
-}
-
-
-const tradeConfirmedClient = async (data) => {
-  console.log('%%%%%%%%%', data);
-  const { name } = await DB.getCompany(data.company)
-  io.emit('TradeConfirmedClient')
-  const details = `${name} buys ${data.amount}...`
-  DB.updateCapacity(data.axeID, data.amount)
-  Email.confirmTrade('confirmations@axedmarkets.com', details)
-  const transactionUpdate = {
-    completeTime: new Date(),
-  }
-  DB.updateTransaction(data.transactionID, transactionUpdate)
-}
-
-//
 const socketMiddleware = async (req, res, next) => {
-  // console.log('rrrr', req.body);
-  // const companyID = await DB.getCompanyIDfromAxe(req.body.data1.axeID)
-  // const activeTraders = users.filter((u) => u.companyID === companyID)
-  // req.body.activeTraders = activeTraders
   req.body.activeTraders = users
   await next()
 }

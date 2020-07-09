@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt')
 const Email = require('./nodemailer')
 
 const saltRounds = 10
-const Environment = 'test'
+const Environment = 'development'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -30,7 +30,7 @@ const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
-// Transaction.sync({ force: true })
+Transaction.sync({ force: true })
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
