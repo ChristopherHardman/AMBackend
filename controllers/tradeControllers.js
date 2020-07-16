@@ -9,8 +9,6 @@ const Email = require('../nodemailer')
 const RFQ = async (req, res) => {
   try {
     const { userID, axeID, amount } = req.body.data1
-    const { activeTraders } = req.body
-    const { capacity, remaining } = await DB.checkCapacity(axeID, amount)
 
     const { company } = await DB.getUser(userID)
     const { type } = await DB.getCompany(company)
@@ -28,17 +26,17 @@ const RFQ = async (req, res) => {
     const transactionID = await DB.createTransaction(newTransaction)
 
     // Check remaining capacity
-    if (!capacity) {
-      res.send({ status: 'no capacity', remaining })
+    if (axe.capacity < amount) {
+      res.send({ status: 'no capacity', remaining: axe.capacity })
       return
     }
 
-    // Check if axe is currently being traded
+    // Check if axe is currently being traded or paused
     // const status = await DB.checkTradeStatus(axeID)
-    // if (status !== 'available') {
-    //   res.send({ status: 'engaged' })
-    //   return
-    // }
+    if (axe.status !== 'active') {
+      res.send({ status: 'engaged' })
+      return
+    }
 
     // Check if anyone from the bank is online
     const companyRoom = await new Promise((resolve, reject) => {
@@ -75,7 +73,7 @@ const RFQ = async (req, res) => {
 
       // setTimeout(async () => {
       //   const status = await DB.checkTradeStatus(axeID)
-      //   if (status === 'available') {
+      //   if (status === 'active') {
       //     req.app.io.to(axe.company).emit('TradeRequest', {
       //       axe,
       //       tradeDetails
@@ -99,10 +97,10 @@ const RFQ = async (req, res) => {
 
 // Someone from the bank picksup RFQ
 // Record pickup, update status of the axe and inform client
-const pickup = async (data, users, io) => {
+const pickup = async (data, io) => {
   try {
-    console.log('pickup', data, users);
-    let { clientTrader, axeID } = await DB.getTransaction(data.transactionID)
+    console.log('pickup', data)
+    const { clientTrader, axeID } = await DB.getTransaction(data.transactionID)
     await DB.updateTransaction(data.transactionID, {
       pickupTime: new Date(),
       bankTrader: data.userID,
@@ -123,6 +121,106 @@ const decline = async (data) => {
     console.log('ERROR', error)
   }
 }
+
+// Bank sends price to client
+const sendPrice = async (data, io) => {
+  try {
+    console.log('Send Price', data)
+    // TO DO: update axe details
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    DB.updateTransaction(data.transactionID, {
+      pricingVolChange: data.pricingVol,
+      pricingVolChangeDate: new Date()
+    })
+    io.to(clientTrader).emit('SendPrice', data)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+
+const requestDelta = async (data, io) => {
+  try {
+    console.log('Request Delta', data);
+    const { transactionID, deltaType } = data
+    const { bankTrader } = await DB.getTransaction(transactionID)
+    DB.updateTransaction(transactionID, {
+      initialDelta: deltaType,
+    })
+    io.to(bankTrader).emit('RequestDelta', deltaType)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+const accept = async (data, io) => {
+  try {
+    console.log('ACCEPT', data)
+    const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
+    const dataToSend = await DB.getUserAndCompany(clientTrader)
+    io.to(bankTrader).emit('ClientDetails', dataToSend)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+const acknowledgeToDeal = async (data, io) => {
+  try {
+    console.log('ACKNOWLEDGE TO DEAL', data)
+    const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
+    const clientDetails = await DB.getUserAndCompany(clientTrader)
+    let bankDetails = await DB.getUserAndCompany(bankTrader)
+    io.to(bankTrader).emit('ClientDetails', clientDetails)
+    io.to(clientTrader).emit('AcknowledgeToDeal', bankDetails)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+
+const sendFinalDetails = async (data, io) => {
+  try {
+    console.log('Send Final Details', data)
+    let {clientTrader, bankTrader} = await DB.getTransaction(data.transactionID)
+    let bankDetails = await DB.getUserAndCompany(bankTrader)
+    const dataToSend = { bankDetails, data}
+    io.to(clientTrader).emit('FinalDetails', dataToSend)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+const clientAccept = async (data, io) => {
+  try {
+    console.log('Client Accept', data)
+    io.emit('ClientAccept')
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+const finish = async (data, io) => {
+  try {
+    console.log('Finish!', data)
+    const { initialAmount, axeID } = await DB.getTransaction(data.transactionID)
+    DB.updateCapacity(axeID, initialAmount)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+
+// Client request times out for live trade
+const timedOut = async (data, io) => {
+  try {
+    console.log('Timed out', data)
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    io.to(clientTrader).emit('TimedOut')
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
 
 // Client requests to ref RFQ
 const refRFQ = async (data, io) => {
@@ -172,83 +270,6 @@ const release = async (data, io) => {
   }
 }
 
-// Bank sends price to client
-const sendPrice = async (data, io) => {
-  try {
-    console.log('Send Price', data)
-    // TO DO: update axe details
-    const { clientTrader } = await DB.getTransaction(data.transactionID)
-    DB.updateTransaction(data.transactionID, {
-      pricingVolChange: data.pricingVol,
-      pricingVolChangeDate: new Date()
-    })
-    io.to(clientTrader).emit('SendPrice', data)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-
-const requestDelta = async (data, io) => {
-  try {
-    const { transactionID, delta } = data
-    const { bankTrader } = await DB.getTransaction(transactionID)
-    DB.updateTransaction(transactionID, {
-      initialDelta: delta,
-    })
-    io.to(bankTrader).emit('RequestDelta', delta)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-const accept = async (data, io) => {
-  try {
-    console.log('ACCEPT', data);
-    let {clientTrader, bankTrader} = await DB.getTransaction(data.transaction)
-    let dataToSend = await DB.getUserAndCompany(clientTrader)
-    io.to(bankTrader).emit('ClientDetails', dataToSend)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-
-const sendDelta = async (data, io) => {
-  try {
-    console.log('Send Delta', data)
-    let {clientTrader, bankTrader} = await DB.getTransaction(data.transaction)
-    let bankDetails = await DB.getUserAndCompany(bankTrader)
-    const dataToSend = { bankDetails, deltaUpdate: data.deltaUpdate}
-    io.to(clientTrader).emit('SendDelta', dataToSend)
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-
-const clientAccept = async (data, io) => {
-  try {
-    console.log('Client Accept', data)
-    io.emit('ClientAccept')
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-
-// Client request times out for live trade
-const timedOut = async (data, io) => {
-  try {
-    console.log('Timed out', data)
-    const { clientTrader } = await DB.getTransaction(data.transactionID)
-    io.to(clientTrader).emit('TimedOut')
-  } catch (error) {
-    console.log('ERROR', error)
-  }
-}
-
-
 // Cancel trade - either client or bank cancels
 const cancelTrade = async (data, io) => {
   try {
@@ -267,6 +288,8 @@ const cancelTrade = async (data, io) => {
 
 module.exports = {
   accept,
+  acknowledgeToDeal,
+  finish,
   RFQ,
   pickup,
   decline,
@@ -276,7 +299,7 @@ module.exports = {
   release,
   clientAccept,
   requestDelta,
-  sendDelta,
+  sendFinalDetails,
   refRFQ,
   refPrice,
 }

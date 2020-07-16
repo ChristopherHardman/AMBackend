@@ -211,8 +211,13 @@ const addAxe = async (axe) => {
   const result = await newAxe.save()
   if (result.dataValues) {
     recordActivity('New Axe Created', axe.userID)
-    Email.appAlerts('New Axe Created', axe.userID)
-    return 200
+    // Email.appAlerts('New Axe Created', axe.userID)
+    const now = new Date()
+    const filter = {
+      where: { expiryDate: { [Op.gt]: now }, company: axe.company },
+    }
+    const updatedAxes = await Axe.findAll(filter).map((a) => a.get({ plain: true }))
+    return updatedAxes
   }
   return 401
 }
@@ -220,14 +225,39 @@ const addAxe = async (axe) => {
 const updateAxe = async (axe, userID) => {
   console.log(axe, userID);
   delete axe.views
-  // axe.lastUpdate = new Date()
-  // Update capacity if notional has been updated
-  const { firstName, lastName } = await getUser(userID)
+  // TO DO: Update capacity if notional has been updated
+  const { firstName, lastName, company } = await getUser(userID)
   axe.updater = `${firstName} ${lastName}`
   const update = await Axe.update(axe, { where: { id: axe.id } })
-  if (update[0] === 1) return 'success'
+  if (update[0] === 1) {
+    const now = new Date()
+    const filter = {
+      where: { expiryDate: { [Op.gt]: now }, company },
+    }
+    const updatedAxes = await Axe.findAll(filter).map((a) => a.get({ plain: true }))
+    return updatedAxes
+  }
   return null
 }
+
+const pauseAll = async (companyID, label) => {
+  console.log("8888888", companyID, label);
+  const now = new Date()
+  const filter = {
+    where: { expiryDate: { [Op.gt]: now },
+    company: companyID
+   },
+  }
+  const results = await Axe.findAll(filter).map((a) => a.get({ plain: true })).map( a => a.id)
+  console.log(results);
+  for (const axe of results) {
+    const update = await Axe.update({status: label}, { where: { id: axe } })
+    console.log(update);
+  }
+  const updatedAxes = await Axe.findAll(filter).map((a) => a.get({ plain: true }))
+  return updatedAxes
+}
+
 
 const createAccount = async (user) => {
   const uniqueEmail = await User.findAll({ where: { email: user.email } })
@@ -402,22 +432,23 @@ const getCustomLists = async (listIDs) => {
 }
 
 // Trade
-const checkCapacity = async (axeID, amount) => {
-  const axe = await Axe.findByPk(axeID)
-  const check = axe.capacity >= amount
-  return { capacity: check, remaining: axe.capacity }
-}
+// const checkCapacity = async (axeID, amount) => {
+//   const axe = await Axe.findByPk(axeID)
+//   const check = axe.capacity >= amount
+//   return { capacity: check, remaining: axe.capacity }
+// }
 
 const updateCapacity = async (axeID, amount) => {
   const axe = await Axe.findByPk(axeID)
-  axe.capacity -= amount
+  console.log('^^^^^^', axe.capacity - amount);
+  axe.capacity = axe.capacity - amount
   await axe.save()
 }
 
-const checkTradeStatus = async (axeID) => {
-  const axe = await Axe.findByPk(axeID)
-  return axe.tradeStatus
-}
+// const checkTradeStatus = async (axeID) => {
+//   const axe = await Axe.findByPk(axeID)
+//   return axe.tradeStatus
+// }
 
 const updateTradeStatus = async (axeID, status) => {
   const axe = await Axe.findByPk(axeID)
@@ -478,12 +509,13 @@ module.exports = {
   getUser,
   getUserAndCompany,
   getCompanies,
+  pauseAll,
   updateAxe,
   savePreferences,
   // Trade
-  checkCapacity,
+  // checkCapacity,
   updateCapacity,
-  checkTradeStatus,
+  // checkTradeStatus,
   getAxeByID,
   getCompanyIDfromAxe,
   updateTradeStatus,

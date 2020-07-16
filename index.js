@@ -3,18 +3,15 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const server = require('http').createServer(app)
 const io = require('socket.io')(server)
-const DB = require('./dbConnect')
 const AdminController = require('./controllers/adminControllers')
 const AxeController = require('./controllers/axeControllers')
 const SearchController = require('./controllers/searchControllers')
 const TradeController = require('./controllers/tradeControllers')
 const UserController = require('./controllers/userControllers')
-const Email = require('./nodemailer')
 
 const port = process.env.PORT || 3001
 
-let users = {}
-
+// let users = {}
 // io.use((socket, next) => {
 //   let token = socket.handshake.query.token;
 //   console.log('USING', token);
@@ -28,17 +25,14 @@ io.on('connection', async (socket) => {
 
   // Do we need this?
   socket.on('token', (data) => {
-    users[data.userID] = data.socketID
+    // users[data.userID] = data.socketID
     socket.join(data.company)
     socket.join(data.userID)
-    socket.join(123)
   })
 
   socket.on('Decline', (data) => TradeController.decline(data))
 
-  socket.on('pickup', async (data) => TradeController.pickup(data, users, io))
-
-  socket.on('Release', (data) => TradeController.release(data, io))
+  socket.on('pickup', async (data) => TradeController.pickup(data, io))
 
   socket.on('SendPrice', (data) => TradeController.sendPrice(data, io))
 
@@ -48,16 +42,18 @@ io.on('connection', async (socket) => {
 
   socket.on('Accept', (data) => TradeController.accept(data, io))
 
-  socket.on('SendDelta', (data) => TradeController.sendDelta(data, io))
+  socket.on('AcknowledgeToDeal', (data) => TradeController.acknowledgeToDeal(data, io))
+
+  socket.on('SendFinalDetails', (data) => TradeController.sendFinalDetails(data, io))
 
   socket.on('ClientAccept', (data) => TradeController.clientAccept(data, io))
 
-  socket.on('RefPrice', (data) => TradeController.refPrice(data, io))
-
-  socket.on('RefRFQ', (data) => TradeController.refRFQ(data, io))
+  socket.on('Finish', (data) => TradeController.finish(data, io))
 
   socket.on('TimedOut', (data) => TradeController.timedOut(data, io))
-
+  socket.on('Release', (data) => TradeController.release(data, io))
+  socket.on('RefPrice', (data) => TradeController.refPrice(data, io))
+  socket.on('RefRFQ', (data) => TradeController.refRFQ(data, io))
   socket.on('Cancel', (data) => TradeController.cancelTrade(data, io))
 
   socket.on('disconnect', () => {
@@ -66,10 +62,10 @@ io.on('connection', async (socket) => {
   })
 })
 
-const socketMiddleware = async (req, res, next) => {
-  req.body.activeTraders = users
-  await next()
-}
+// const socketMiddleware = async (req, res, next) => {
+//   req.body.activeTraders = users
+//   await next()
+// }
 
 app.use(cors())
 app.use(bodyParser.json())
@@ -93,18 +89,17 @@ app.post('/savePreferences', UserController.savePreferences)
 // Search
 app.post('/search', SearchController.search)
 app.post('/submitAxe', AxeController.submitAxe)
+app.patch('/pauseAll', AxeController.pauseAll)
 app.patch('/updateAxe', AxeController.updateAxe)
 app.post('/viewAxe', SearchController.viewAxe)
 
 // Trade
-app.post('/RFQ', socketMiddleware, TradeController.RFQ)
-app.post('/pickup', socketMiddleware, TradeController.pickup)
+app.post('/RFQ', TradeController.RFQ)
+app.post('/pickup', TradeController.pickup)
 
 // Error handling
 app.use((error, req, res, next) => {
-  console.log('ERROR', error)
   return res.status(500).json({ error: error.toString() })
-});
-
+})
 
 server.listen(port, () => console.log(`AM backend listening on port ${port}!`))
