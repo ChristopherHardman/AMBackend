@@ -8,6 +8,8 @@ const Email = require('../nodemailer')
 // the request is sent to all other traders at the relevant bank
 const RFQ = async (req, res) => {
   try {
+
+    console.log('RFQ');
     const { userID, axeID, amount } = req.body.data1
 
     const { company } = await DB.getUser(userID)
@@ -65,15 +67,15 @@ const RFQ = async (req, res) => {
       })
     })
     if (createrRoom !== 0) {
-      console.log('CREATOR', axe.userID);
       req.app.io.to(axe.userID).emit('TradeRequest', {
         axe,
         tradeDetails
       })
 
       setTimeout(async () => {
-        const status = await DB.checkTradeStatus(axeID)
-        if (status === 'active') {
+        const axe = await DB.getAxeByID(axeID)
+        console.log('STATUS', axe);
+        if (axe.status === 'active') {
           req.app.io.to(axe.company).emit('TradeRequest', {
             axe,
             tradeDetails
