@@ -74,7 +74,7 @@ const RFQ = async (req, res) => {
 
       setTimeout(async () => {
         const axe = await DB.getAxeByID(axeID)
-        console.log('STATUS', axe);
+        console.log('STATUS ***', axe);
         if (axe.status === 'active') {
           req.app.io.to(axe.company).emit('TradeRequest', {
             axe,
