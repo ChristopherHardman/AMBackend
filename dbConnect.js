@@ -25,12 +25,12 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
-// Tracker.sync({ force: true })
-// Company.sync({ force: true })
-// CustomList.sync({ force: true })
-// Transaction.sync({ force: true })
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+Axe.sync({ force: true })
+Tracker.sync({ force: true })
+Company.sync({ force: true })
+CustomList.sync({ force: true })
+Transaction.sync({ force: true })
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
@@ -223,9 +223,15 @@ const addAxe = async (axe) => {
 }
 
 const updateAxe = async (axe, userID) => {
-  console.log(axe, userID);
+  // TO DO: Protect against multiple edits happening simultaneously
+  const check = await getAxeByID(axe.id)
+  if (check.notional !== axe.notional) {
+    let diff = axe.notional - check.notional
+    let newCapacity = check.capacity + diff
+    axe.capacity = newCapacity
+  }
+
   delete axe.views
-  // TO DO: Update capacity if notional has been updated
   const { firstName, lastName, company } = await getUser(userID)
   axe.updater = `${firstName} ${lastName}`
   const update = await Axe.update(axe, { where: { id: axe.id } })
@@ -241,7 +247,6 @@ const updateAxe = async (axe, userID) => {
 }
 
 const pauseAll = async (companyID, label) => {
-  console.log("8888888", companyID, label);
   const now = new Date()
   const filter = {
     where: { expiryDate: { [Op.gt]: now },
@@ -451,9 +456,16 @@ const updateCapacity = async (axeID, amount) => {
 // }
 
 const updateTradeStatus = async (axeID, status) => {
-  const axe = await Axe.findByPk(axeID)
-  axe.tradeStatus = status
-  await axe.save()
+  // const axe = await Axe.findByPk(axeID)
+  console.log('UUUPPPDDDAAATTTEEE', axeID, status);
+  const updates = { status }
+  const update = await Axe.update(updates, { where: { id: axeID } })
+  //
+  // console.log('********AAAAA******', status, axe);
+  // axe.tradeStatus = status
+  // await axe.save()
+  // const axe2 = await Axe.findByPk(axeID)
+  // console.log(axe2);
 }
 
 const getCompanyIDfromAxe = async (axeID) => {

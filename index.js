@@ -40,13 +40,19 @@ io.on('connection', async (socket) => {
 
   socket.on('RequestDelta', (data) => TradeController.requestDelta(data, io))
 
+  socket.on('Disagree', (data) => TradeController.disagree(data, io))
+
   socket.on('Accept', (data) => TradeController.accept(data, io))
 
-  socket.on('AcknowledgeToDeal', (data) => TradeController.acknowledgeToDeal(data, io))
+  socket.on('AcknowledgeToDeal', (data) =>
+    TradeController.acknowledgeToDeal(data, io)
+  )
 
   socket.on('SendFinalDetails', (data) => TradeController.sendFinalDetails(data, io))
 
   socket.on('ClientAccept', (data) => TradeController.clientAccept(data, io))
+
+  socket.on('ConfirmResolved', (data) => TradeController.confirmResolved(data, io))
 
   socket.on('Finish', (data) => TradeController.finish(data, io))
 

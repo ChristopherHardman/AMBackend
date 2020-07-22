@@ -55,7 +55,7 @@ const RFQ = async (req, res) => {
 
     const tradeDetails = { transactionID, type, amount }
 
-    // await DB.updateTradeStatus(axeID, 'requesting')
+    await DB.updateTradeStatus(axeID, 'requesting')
 
     // Check is trader linked to axe is online - if so, alert them first and
     // give them 10 seconds to respond. If not online or hasn't picked-up after 10
@@ -75,14 +75,14 @@ const RFQ = async (req, res) => {
       setTimeout(async () => {
         const axe = await DB.getAxeByID(axeID)
         console.log('STATUS ***', axe);
-        if (axe.status === 'active') {
+        if (axe.status === 'requesting') {
           req.app.io.to(axe.company).emit('TradeRequest', {
             axe,
             tradeDetails
           })
         }
       }, 10000)
-    }
+  }
 
     if (createrRoom === 0) {
       req.app.io.to(axe.company).emit('TradeRequest', {
@@ -159,8 +159,21 @@ const accept = async (data, io) => {
   try {
     console.log('ACCEPT', data)
     const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
-    const dataToSend = await DB.getUserAndCompany(clientTrader)
-    io.to(bankTrader).emit('ClientDetails', dataToSend)
+    const clientDetails = await DB.getUserAndCompany(clientTrader)
+    const bankDetails = await DB.getUserAndCompany(bankTrader)
+    io.to(bankTrader).emit('ClientDetails', clientDetails)
+    io.to(clientTrader).emit('BankDetails', bankDetails)
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
+const disagree = async (data, io) => {
+  try {
+    console.log('Disagree', data)
+    const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
+    const clientDetails = await DB.getUserAndCompany(clientTrader)
+    io.to(bankTrader).emit('Disagree', clientDetails)
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -179,14 +192,13 @@ const acknowledgeToDeal = async (data, io) => {
   }
 }
 
-
 const sendFinalDetails = async (data, io) => {
   try {
     console.log('Send Final Details', data)
-    let {clientTrader, bankTrader} = await DB.getTransaction(data.transactionID)
-    let bankDetails = await DB.getUserAndCompany(bankTrader)
-    const dataToSend = { bankDetails, data}
-    io.to(clientTrader).emit('FinalDetails', dataToSend)
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    // let bankDetails = await DB.getUserAndCompany(bankTrader)
+    // const dataToSend = { bankDetails, data}
+    io.to(clientTrader).emit('FinalDetails', data)
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -201,11 +213,24 @@ const clientAccept = async (data, io) => {
   }
 }
 
+
+const confirmResolved = async (data, io) => {
+  try {
+    console.log('Confirm Resolved', data)
+    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    io.to(clientTrader).emit('ConfirmResolved')
+
+  } catch (error) {
+    console.log('ERROR', error)
+  }
+}
+
 const finish = async (data, io) => {
   try {
     console.log('Finish!', data)
     const { initialAmount, axeID } = await DB.getTransaction(data.transactionID)
     DB.updateCapacity(axeID, initialAmount)
+    await DB.updateTradeStatus(axeID, 'active')
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -216,8 +241,9 @@ const finish = async (data, io) => {
 const timedOut = async (data, io) => {
   try {
     console.log('Timed out', data)
-    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    const { clientTrader, axeID } = await DB.getTransaction(data.transactionID)
     io.to(clientTrader).emit('TimedOut')
+    await DB.updateTradeStatus(axeID, 'active')
   } catch (error) {
     console.log('ERROR', error)
   }
@@ -281,7 +307,8 @@ const cancelTrade = async (data, io) => {
       cancelledBy: userID,
       cancelTime: new Date()
     })
-    const { clientTrader, bankTrader } = await DB.getTransaction(data.transactionID)
+    const { clientTrader, bankTrader, axeID } = await DB.getTransaction(data.transactionID)
+    await DB.updateTradeStatus(axeID, 'active')
     io.to(clientTrader).to(bankTrader).emit('Cancel')
   } catch (error) {
     console.log('ERROR', error)
@@ -291,6 +318,8 @@ const cancelTrade = async (data, io) => {
 module.exports = {
   accept,
   acknowledgeToDeal,
+  confirmResolved,
+  disagree,
   finish,
   RFQ,
   pickup,
