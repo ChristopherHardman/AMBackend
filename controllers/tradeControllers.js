@@ -129,15 +129,55 @@ const sendPrice = async (data, io) => {
   try {
     console.log('Send Price', data)
     // TO DO: update axe details
-    const { clientTrader } = await DB.getTransaction(data.transactionID)
+    const { clientTrader, axeID, bankTrader } = await DB.getTransaction(data.transactionID)
     DB.updateTransaction(data.transactionID, {
       pricingVolChange: data.pricingVol,
       pricingVolChangeDate: new Date()
     })
+    // const axeUpdate = {id: axeID}
+    // let potentialUpdates = [
+    //   'pricingVol',
+    //   'pricingVol1',
+    //   'pricingVol2',
+    //   'putPricingVol',
+    //   'callPricingVol',
+    //   'spotRef',
+    //   'forwardRef',
+    //   'NDFRef',
+    //   'premium',
+    //   'netPremium',
+    //   potentialUpdates.forEach((l) => {
+    //     if (data[l]) axeUpdate[l] = Number(data[l])
+    //   })
+
+      // if (data.pricingVol)  axeUpdate[l] = Number(data[l])
+    // DB.updateAxe(axeUpdate, bankTrader, true)
+    updateAxe(axeID, bankTrader, data)
     io.to(clientTrader).emit('SendPrice', data)
   } catch (error) {
     console.log('ERROR', error)
   }
+}
+
+
+const updateAxe = (axeID, bankTrader, data) => {
+  const axeUpdate = {id: axeID}
+  let potentialUpdates = [
+    'pricingVol',
+    'pricingVol1',
+    'pricingVol2',
+    'putPricingVol',
+    'callPricingVol',
+    'spotRef',
+    'forwardRef',
+    'NDFRef',
+    'premium',
+    'netPremium',
+    ]
+    potentialUpdates.forEach((l) => {
+      if (data[l]) axeUpdate[l] = Number(data[l])
+    })
+    DB.updateAxe(axeUpdate, bankTrader, true)
 }
 
 
@@ -195,9 +235,8 @@ const acknowledgeToDeal = async (data, io) => {
 const sendFinalDetails = async (data, io) => {
   try {
     console.log('Send Final Details', data)
-    const { clientTrader } = await DB.getTransaction(data.transactionID)
-    // let bankDetails = await DB.getUserAndCompany(bankTrader)
-    // const dataToSend = { bankDetails, data}
+    const { clientTrader, bankTrader, axeID } = await DB.getTransaction(data.transactionID)
+    updateAxe(axeID, bankTrader, data)
     io.to(clientTrader).emit('FinalDetails', data)
   } catch (error) {
     console.log('ERROR', error)

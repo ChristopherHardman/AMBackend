@@ -3,7 +3,8 @@ const bcrypt = require('bcrypt')
 const Email = require('./nodemailer')
 
 const saltRounds = 10
-const Environment = 'development'
+const Environment = 'test'
+const Deployed = Environment === 'development'
 const sequelize = new Sequelize(
   Environment === 'test'
     ? 'postgres://localhost:5432/am'
@@ -25,17 +26,88 @@ const Company = sequelize.import(`${__dirname}/models/companyModel`)
 const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
-// User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
-// Tracker.sync({ force: true })
-// Company.sync({ force: true })
-// CustomList.sync({ force: true })
-// Transaction.sync({ force: true })
+User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
+Axe.sync({ force: true })
+Tracker.sync({ force: true })
+Company.sync({ force: true })
+CustomList.sync({ force: true })
+Transaction.sync({ force: true })
+
+// ADMIN
 
 const recordActivity = async (type, user) => {
   const newEvent = new Tracker({ type, user })
   await newEvent.save()
 }
+
+const createAccount = async (user) => {
+  const uniqueEmail = await User.findAll({ where: { email: user.email } })
+  if (uniqueEmail.length > 0) return 401
+  if (uniqueEmail.length === 0) {
+    user.firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)
+    user.lastName = user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)
+    const hashedPassword = await new Promise((resolve, reject) => {
+      bcrypt.hash(user.password, saltRounds, function (err, hash) {
+        if (err) reject(err)
+        resolve(hash)
+      })
+    })
+    user.password = hashedPassword
+    const newUser = new User(user)
+    await newUser.save()
+    const userRecord = await User.findAll({ where: { email: user.email } })
+    const company = await Company.findByPk(userRecord[0].company)
+    company.staff = company.staff
+      ? [...company.staff, userRecord[0].id]
+      : [userRecord[0].id]
+    await company.save()
+    return 200
+  }
+}
+
+const getActivity = async () => {
+  const results = await Tracker.findAll().map((a) => a.get({ plain: true }))
+  return results
+}
+
+const addCompany = async (company) => {
+  const newCompany = new Company(company)
+  await newCompany.save()
+}
+
+const updateCompany = async (company) => {
+  const update = await Company.update(company, { where: { id: company.id } })
+  if (update[0] === 1) return 'success'
+  return null
+}
+
+const updateUser = async (user) => {
+  const update = await User.update(user, { where: { id: user.id } })
+  if (update[0] === 1) return 200
+  return 500
+}
+
+const getCompanies = async () => {
+  const results = await Company.findAll().map((a) => a.get({ plain: true }))
+  return results
+}
+
+const getUsers = async () => {
+  const results = await User.findAll().map((a) => a.get({ plain: true }))
+  return results
+}
+
+const getCompany = async (companyID) => {
+  const user = await Company.findAll({ where: { id: companyID } })
+  return user.map((a) => a.dataValues)[0]
+}
+
+const getTransactions = async (request) => {
+  const results = await Transaction.findAll().map((a) => a.get({ plain: true }))
+  return results
+}
+
+// SEARCH
 
 const generateFilter = (query, type, companyID) => {
   const DateOptions = {
@@ -67,7 +139,7 @@ const generateFilter = (query, type, companyID) => {
   if (query.product) filter.where.product = query.product
   if (query.buySell) filter.where.direction = query.buySell
   if (type === 'Bank') filter.where.company = companyID
-  // if (type !== 'Bank') filter.where.excludeList = { [Op.notIn]: [companyID] }
+  // if (type !== 'Bank') filter.where.excludeList = { [Op.contains]: [companyID] }
   if (query.currencyPair) filter.where.currencyPair = query.currencyPair
   if (query.date) {
     // How should we apply month calculation?
@@ -98,13 +170,6 @@ const generateFilter = (query, type, companyID) => {
       filter.where.category = query.filter
   }
   return filter
-  // Filters	Description	Examples
-  // O/N	Only O/N options i.e. 1 day options expiring next day	All options with 1 day expiry
-  // Vanilla G10	Simple options, on developed currencies.  Buyer has right to exercise option on expiry date. 	USD, EUR, JPY, CAD, GBP, CHF, NOK, SEK, AUD, NZD, DKK
-  // Vanilla EM	Simple options, on Emerging Market currencies. Buyer has right to exercise option on expiry date. 	TRT, ZAR, MXN, RUB, PLN, HUF, CNH, ILS, SGD, HKD, CZk, RON, and all NDF currencies (List 3 on "Curency Pairs Tab)
-  // 1st Gen Exotics	Exotic options typically trigger when the currency reaches the strike price. They can have additional features such as knock-outs for example.	Digitals (DIGI), One-Touch (OT), No Touch (NT), Knock-Outs (KO), Knock-in (KI), Reverse Knock Outs(RKO), Window Knock-outs (WKO), Double Knock-Out (DKO)
-  // Vol/Var	Volatility Swap (Vol swap), Variance Swap (Var swap).	1M EURUSD Vol Swap to sell at 9.5%
-  // Correlation 	Correlation Options involve more than one product	Dual & Triple Digitals, Worst-Ofs.
 }
 
 const getAxes = async (request) => {
@@ -113,27 +178,33 @@ const getAxes = async (request) => {
   const filterApplied = generateFilter(query, type, id)
   const results = await Axe.findAll(filterApplied).map((a) => a.get({ plain: true }))
   if (results.length === 0) return []
-  // raw: true
-  // const array = results.map((a) => a.dataValues)
   const user = await getUser(userID)
   // Remove sensitive information and any axes that a company has been excluded from
   if (user.type === 'Client') {
-    const newArray = results
-      .filter((a) => !a.excludeList.includes(company))
-      .map(
-        ({
-          traderName,
-          company,
-          excludeList,
-          userID,
-          // notional,
-          views,
-          createdAt,
-          updatedAt,
-          ...axe
-        }) => axe
-      )
-    return newArray
+    const newArray = results.filter((a) => !a.excludeList.includes(company))
+
+    const arrayToSend = []
+
+    for (const axe of newArray) {
+      const { clients } = await Company.findByPk(axe.company)
+      console.log('CLIENTS', clients)
+      if (clients.includes(company)) arrayToSend.push(axe)
+    }
+
+    arrayToSend.map(
+      ({
+        traderName,
+        company,
+        excludeList,
+        userID,
+        // notional,
+        views,
+        createdAt,
+        updatedAt,
+        ...axe
+      }) => axe
+    )
+    return arrayToSend
   }
   if (user.type === 'Bank-Sales') {
     const newArray = results.map(({ notional, views, ...axe }) => axe)
@@ -179,6 +250,8 @@ const getAxe = async (userID, axeID) => {
   }
 }
 
+// CREATE & UPDATE AXE
+
 const categoriseAxe = (axe) => {
   const currency1 = axe.currencyPair.substring(0, 3)
   const currency2 = axe.currencyPair.substring(3)
@@ -211,7 +284,7 @@ const addAxe = async (axe) => {
   const result = await newAxe.save()
   if (result.dataValues) {
     recordActivity('New Axe Created', axe.userID)
-    // Email.appAlerts('New Axe Created', axe.userID)
+    if (Deployed) Email.appAlerts('New Axe Created', axe.userID)
     const now = new Date()
     const filter = {
       where: { expiryDate: { [Op.gt]: now }, company: axe.company },
@@ -222,16 +295,18 @@ const addAxe = async (axe) => {
   return 401
 }
 
-const updateAxe = async (axe, userID) => {
+const updateAxe = async (axe, userID, tradeUpdate) => {
   // TO DO: Protect against multiple edits happening simultaneously
-  const check = await getAxeByID(axe.id)
-  if (check.notional !== axe.notional) {
-    let diff = axe.notional - check.notional
-    let newCapacity = check.capacity + diff
-    axe.capacity = newCapacity
+  console.log('EEEDDDDIIIIITTTT', axe);
+  if (!tradeUpdate) {
+    const check = await getAxeByID(axe.id)
+    if (check.notional !== axe.notional) {
+      const diff = axe.notional - check.notional
+      const newCapacity = check.capacity + diff
+      axe.capacity = newCapacity
+    }
+    delete axe.views
   }
-
-  delete axe.views
   const { firstName, lastName, company } = await getUser(userID)
   axe.updater = `${firstName} ${lastName}`
   const update = await Axe.update(axe, { where: { id: axe.id } })
@@ -249,45 +324,21 @@ const updateAxe = async (axe, userID) => {
 const pauseAll = async (companyID, label) => {
   const now = new Date()
   const filter = {
-    where: { expiryDate: { [Op.gt]: now },
-    company: companyID
-   },
+    where: { expiryDate: { [Op.gt]: now }, company: companyID },
   }
-  const results = await Axe.findAll(filter).map((a) => a.get({ plain: true })).map( a => a.id)
-  console.log(results);
+  const results = await Axe.findAll(filter)
+    .map((a) => a.get({ plain: true }))
+    .map((a) => a.id)
+  console.log(results)
   for (const axe of results) {
-    const update = await Axe.update({status: label}, { where: { id: axe } })
-    console.log(update);
+    const update = await Axe.update({ status: label }, { where: { id: axe } })
+    console.log(update)
   }
   const updatedAxes = await Axe.findAll(filter).map((a) => a.get({ plain: true }))
   return updatedAxes
 }
 
-
-const createAccount = async (user) => {
-  const uniqueEmail = await User.findAll({ where: { email: user.email } })
-  if (uniqueEmail.length > 0) return 401
-  if (uniqueEmail.length === 0) {
-    user.firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)
-    user.lastName = user.lastName.charAt(0).toUpperCase() + user.lastName.slice(1)
-    const hashedPassword = await new Promise((resolve, reject) => {
-      bcrypt.hash(user.password, saltRounds, function (err, hash) {
-        if (err) reject(err)
-        resolve(hash)
-      })
-    })
-    user.password = hashedPassword
-    const newUser = new User(user)
-    await newUser.save()
-
-    const uuu = await User.findAll({ where: { email: user.email } })
-    const company = await Company.findByPk(uuu[0].company)
-    company.staff = company.staff ? [...company.staff, uuu[0].id] : [uuu[0].id]
-    await company.save()
-    const companyUpdated = await Company.findByPk(uuu[0].company)
-    return 200
-  }
-}
+// USER
 
 const login = async ({ email, password }) => {
   const user = await User.findAll({ where: { email } })
@@ -308,6 +359,7 @@ const login = async ({ email, password }) => {
       id: details.id,
       email: details.email,
       company: details.company,
+      companyName: company.name,
       customLists,
       notifications: details.notifications ? details.notifications : [],
       productPreferences: details.productPreferences
@@ -323,7 +375,6 @@ const login = async ({ email, password }) => {
 
 const generateClientList = async (clients) => {
   const res = []
-
   for (const client of clients) {
     const a = { staff: [] }
     const comp = await Company.findByPk(client)
@@ -377,54 +428,6 @@ const savePreferences = async ({ id, label, preferences }) => {
   return { [label]: BBB[label] }
 }
 
-const getUser = async (userID) => {
-  const user = await User.findAll({ where: { id: userID } })
-  return user.map((a) => a.dataValues)[0]
-}
-
-const getUserAndCompany = async (userID) => {
-  const { firstName, lastName, company, type, telephone, location } = await User.findByPk(userID)
-  const { name } = await Company.findByPk(company)
-  return { company: name, type, firstName, lastName, telephone, location }
-}
-
-const getActivity = async () => {
-  const results = await Tracker.findAll()
-  return results.map((a) => a.dataValues)
-}
-
-const addCompany = async (company) => {
-  const newCompany = new Company(company)
-  await newCompany.save()
-}
-
-const updateCompany = async (company) => {
-  const update = await Company.update(company, { where: { id: company.id } })
-  if (update[0] === 1) return 'success'
-  return null
-}
-
-const updateUser = async (user) => {
-  const update = await User.update(user, { where: { id: user.id } })
-  if (update[0] === 1) return 200
-  return 500
-}
-
-const getCompanies = async () => {
-  const results = await Company.findAll()
-  return results.map((a) => a.dataValues)
-}
-
-const getUsers = async () => {
-  const results = await User.findAll()
-  return results.map((a) => a.dataValues)
-}
-
-const getCompany = async (companyID) => {
-  const user = await Company.findAll({ where: { id: companyID } })
-  return user.map((a) => a.dataValues)[0]
-}
-
 const getCustomLists = async (listIDs) => {
   const lists = await CustomList.findAll({
     where: {
@@ -436,36 +439,17 @@ const getCustomLists = async (listIDs) => {
   return lists
 }
 
-// Trade
-// const checkCapacity = async (axeID, amount) => {
-//   const axe = await Axe.findByPk(axeID)
-//   const check = axe.capacity >= amount
-//   return { capacity: check, remaining: axe.capacity }
-// }
+// TRADE
 
 const updateCapacity = async (axeID, amount) => {
   const axe = await Axe.findByPk(axeID)
-  console.log('^^^^^^', axe.capacity - amount);
-  axe.capacity = axe.capacity - amount
+  axe.capacity -= amount
   await axe.save()
 }
 
-// const checkTradeStatus = async (axeID) => {
-//   const axe = await Axe.findByPk(axeID)
-//   return axe.tradeStatus
-// }
-
 const updateTradeStatus = async (axeID, status) => {
-  // const axe = await Axe.findByPk(axeID)
-  console.log('UUUPPPDDDAAATTTEEE', axeID, status);
   const updates = { status }
   const update = await Axe.update(updates, { where: { id: axeID } })
-  //
-  // console.log('********AAAAA******', status, axe);
-  // axe.tradeStatus = status
-  // await axe.save()
-  // const axe2 = await Axe.findByPk(axeID)
-  // console.log(axe2);
 }
 
 const getCompanyIDfromAxe = async (axeID) => {
@@ -492,14 +476,29 @@ const updateTransaction = async (transactionID, updates) => {
 }
 
 const getTransaction = async (transactionID) => {
-  const transaction = await Transaction.findByPk(transactionID).then((data) => data.get({ plain: true }))
+  const transaction = await Transaction.findByPk(transactionID).then((data) =>
+    data.get({ plain: true })
+  )
   return transaction
 }
 
-const getTransactions = async (request) => {
-  const results = await Transaction.findAll()
-  const array = results.map((a) => a.dataValues)
-  return array
+// UTILS
+const getUser = async (userID) => {
+  const user = await User.findAll({ where: { id: userID } })
+  return user.map((a) => a.dataValues)[0]
+}
+
+const getUserAndCompany = async (userID) => {
+  const {
+    firstName,
+    lastName,
+    company,
+    type,
+    telephone,
+    location,
+  } = await User.findByPk(userID)
+  const { name } = await Company.findByPk(company)
+  return { company: name, type, firstName, lastName, telephone, location }
 }
 
 module.exports = {
@@ -524,10 +523,7 @@ module.exports = {
   pauseAll,
   updateAxe,
   savePreferences,
-  // Trade
-  // checkCapacity,
   updateCapacity,
-  // checkTradeStatus,
   getAxeByID,
   getCompanyIDfromAxe,
   updateTradeStatus,
