@@ -173,6 +173,7 @@ const generateFilter = (query, type, companyID) => {
 }
 
 const getAxes = async (request) => {
+  console.log('&&&&&', request);
   const { query, userID, company } = request
   const { type, id } = await getCompany(company)
   const filterApplied = generateFilter(query, type, id)
@@ -180,6 +181,7 @@ const getAxes = async (request) => {
   if (results.length === 0) return []
   const user = await getUser(userID)
   // Remove sensitive information and any axes that a company has been excluded from
+  console.log('RRRRRR', results);
   if (user.type === 'Client') {
     const newArray = results.filter((a) => !a.excludeList.includes(company))
 
