@@ -188,9 +188,9 @@ const getAxes = async (request) => {
     const arrayToSend = []
 
     for (const axe of newArray) {
-      const { clients } = await Company.findByPk(axe.company)
-      console.log('CLIENTS', clients)
-      if (clients.includes(company)) arrayToSend.push(axe)
+      const company = await Company.findByPk(axe.company)
+      console.log('CLIENTS', company.clients)
+      if (company.clients && company.clients.includes(company)) arrayToSend.push(axe)
     }
 
     arrayToSend.map(
