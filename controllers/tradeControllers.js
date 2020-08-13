@@ -236,8 +236,11 @@ const sendFinalDetails = async (data, io) => {
   try {
     console.log('Send Final Details', data)
     const { clientTrader, bankTrader, axeID } = await DB.getTransaction(data.transactionID)
-    updateAxe(axeID, bankTrader, data)
     io.to(clientTrader).emit('FinalDetails', data)
+    const {ref} = await DB.getAxeByID(axeID)
+    if (ref === 'Spot') data.forwardRef = null
+    if (ref === 'Forward') data.spotRef = null
+    updateAxe(axeID, bankTrader, data)
   } catch (error) {
     console.log('ERROR', error)
   }
