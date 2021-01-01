@@ -27,7 +27,7 @@ const CustomList = sequelize.import(`${__dirname}/models/customListModel`)
 const Transaction = sequelize.import(`${__dirname}/models/transactionModel`)
 
 // User.sync({ force: true }) // Now the `users` table in the database corresponds to the model definition
-// Axe.sync({ force: true })
+Axe.sync({ alter: true })
 // Tracker.sync({ force: true })
 // Company.sync({ force: true })
 // CustomList.sync({ force: true })
@@ -276,6 +276,7 @@ const categoriseAxe = (axe) => {
 }
 
 const addAxe = async (axe) => {
+  console.log('******', axe);
   axe.category = categoriseAxe(axe)
   axe.status = 'active'
   axe.capacity = axe.notional || axe.notional1
@@ -283,6 +284,22 @@ const addAxe = async (axe) => {
   axe.views = []
   axe.updater = axe.traderName
   if (!axe.minimumTrade) axe.minimumTrade = 1
+  if (!axe.expiryDate) {
+    let days
+    if (['1D', 'ON', 'O/N'].includes(axe.tenor)) days = 1
+    else {
+      // let a = axe.tenor.split(/[a-zA-Z]/)
+      let n = Number(axe.tenor.slice(0, axe.tenor.length === 2 ? 1 : 2))
+      let l = axe.tenor.slice(axe.tenor.length === 2 ? 1 : 2)
+      if (l === 'W') n = n * 7
+      if (l === 'M') n = n * 30
+      if (l === 'Y') n = n * 365
+      days = n
+    }
+    const expiry = new Date()
+    expiry.setDate(expiry.getDate() + days)
+    axe.expiryDate = expiry
+  }
   const newAxe = new Axe(axe)
   const result = await newAxe.save()
   if (result.dataValues) {

@@ -19,6 +19,9 @@ module.exports = (sequelize, Sequelize) => {
     excludeList: {
       type: Sequelize.ARRAY(Sequelize.STRING),
     },
+    flex: {
+      type: Sequelize.ARRAY(Sequelize.STRING),
+    },
     direction: {
       type: Sequelize.STRING,
       allowNull: false,
@@ -26,26 +29,27 @@ module.exports = (sequelize, Sequelize) => {
     notional: {
       type: Sequelize.INTEGER,
     },
+    tenor: {
+      type: Sequelize.STRING,
+    },
     expiryDate: {
       type: Sequelize.DATE,
-      allowNull: false,
     },
     deliveryDate: {
       type: Sequelize.DATE,
-      allowNull: false,
     },
     cut: {
       type: Sequelize.STRING,
       allowNull: false,
     },
     strike: {
-      type: Sequelize.DECIMAL,
+      type: Sequelize.STRING,
     },
     digiStrike: {
-      type: Sequelize.DECIMAL,
+      type: Sequelize.STRING,
     },
     barrierStrike: {
-      type: Sequelize.DECIMAL,
+      type: Sequelize.STRING,
     },
     callPut: {
       type: Sequelize.STRING,
@@ -110,10 +114,10 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.DECIMAL,
     },
     putStrike: {
-      type: Sequelize.DECIMAL,
+      type: Sequelize.STRING,
     },
     callStrike: {
-      type: Sequelize.DECIMAL,
+      type: Sequelize.STRING,
     },
     netPremium: {
       type: Sequelize.DECIMAL,
